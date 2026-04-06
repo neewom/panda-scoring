@@ -11,16 +11,12 @@ export default function HomePage() {
   })
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 px-4 py-12 bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-8 px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-6xl">🐼</div>
-        <h1 className="text-5xl font-bold tracking-tight text-purple-700">
-          Panda Scoring
+        <h1 className="text-6xl font-bold tracking-tight text-purple-700">
+          🐼 Scoring
         </h1>
-        <p className="text-lg text-purple-400 font-medium">
-          scoring
-        </p>
       </div>
 
       {/* Actions */}
