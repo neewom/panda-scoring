@@ -30,7 +30,7 @@ export default function HomePage() {
           className="w-full h-14 text-lg font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200 rounded-2xl"
           aria-label="Créer une nouvelle partie"
         >
-          🎮 Nouvelle partie
+          🎲 Nouvelle partie
         </Button>
 
         {/* Reprendre — uniquement si partie en cours */}
