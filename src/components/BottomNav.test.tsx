@@ -12,9 +12,15 @@ function renderWithRoute(initialPath: string) {
 }
 
 describe('BottomNav', () => {
-  it('ne s\'affiche pas sur la page Home /', () => {
+  it('s\'affiche sur la page Home /', () => {
     renderWithRoute('/')
-    expect(screen.queryByRole('navigation', { name: /navigation principale/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: /navigation principale/i })).toBeInTheDocument()
+  })
+
+  it('met en évidence l\'entrée Home sur /', () => {
+    renderWithRoute('/')
+    const homeLink = screen.getByRole('link', { name: /^home$/i })
+    expect(homeLink).toHaveClass('text-purple-700')
   })
 
   it('s\'affiche sur /players', () => {

@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -10,10 +10,6 @@ const navItems = [
 ]
 
 export default function BottomNav() {
-  const { pathname } = useLocation()
-
-  if (pathname === '/') return null
-
   return (
     <nav
       aria-label="Navigation principale"
