@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 export default function HomePage() {
+  const navigate = useNavigate()
   const [currentGame] = useState(() => {
     try {
       return localStorage.getItem('panda-current-game')
@@ -47,6 +49,16 @@ export default function HomePage() {
           aria-label="Voir l'historique des parties"
         >
           📜 Historique des parties
+        </Button>
+
+        {/* Joueurs */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/players')}
+          className="w-full h-12 text-base font-semibold text-purple-500 hover:bg-purple-50 rounded-2xl"
+          aria-label="Gérer les joueurs"
+        >
+          👥 Joueurs
         </Button>
       </div>
 
