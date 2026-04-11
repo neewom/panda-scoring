@@ -23,7 +23,7 @@ export default function BottomNav() {
           aria-label={label}
           className={({ isActive }) =>
             cn(
-              'flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors',
+              'flex flex-1 items-center justify-center py-2 transition-colors',
               isActive
                 ? 'text-purple-700'
                 : 'text-purple-300 hover:text-purple-500'
@@ -31,17 +31,14 @@ export default function BottomNav() {
           }
         >
           {({ isActive }) => (
-            <>
-              <span
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-xl text-lg transition-all',
-                  isActive && 'bg-purple-100 scale-110'
-                )}
-              >
-                {icon}
-              </span>
-              <span className={cn(isActive && 'font-semibold')}>{label}</span>
-            </>
+            <span
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-xl text-lg transition-all',
+                isActive && 'bg-purple-100 scale-110'
+              )}
+            >
+              {icon}
+            </span>
           )}
         </NavLink>
       ))}
