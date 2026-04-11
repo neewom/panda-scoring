@@ -27,3 +27,10 @@ Application de scoring pour jeux de société.
 ## Tests
 - Toujours écrire les tests avec Vitest
 - Ne jamais modifier un test existant sans raison explicite
+
+## Identité Git
+Avant tout commit, configure toujours ton identité Git :
+```
+git config user.name "Glaude"
+git config user.email "glaude@panda-scoring.local"
+```
