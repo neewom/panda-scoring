@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { searchGames } from '@/lib/games'
 import { getPlayers, addPlayer } from '@/lib/players'
 import { createSession } from '@/lib/sessions'
@@ -199,6 +200,14 @@ export default function NewGamePage() {
               <div>
                 <p className="text-xs text-purple-400">Jeu</p>
                 <p className="font-bold text-purple-800 text-lg">{selectedGame.name}</p>
+                <Collapsible>
+                  <CollapsibleTrigger className="mt-1 text-xs text-purple-400 hover:text-purple-600 transition-colors flex items-center gap-1">
+                    Détails ▾
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 text-sm text-purple-700 space-y-1">
+                    <p>👥 Nombre de joueurs : {selectedGame.players.min} – {selectedGame.players.max}</p>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
               <div>
                 <p className="text-xs text-purple-400">Joueurs</p>
