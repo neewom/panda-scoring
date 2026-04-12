@@ -45,3 +45,51 @@ describe('sessions', () => {
     expect(getSessionById('unknown')).toBeUndefined()
   })
 })
+
+import { updateScore, finishSession } from './sessions'
+
+describe('updateScore', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('ajoute un score en localStorage', () => {
+    const session = createSession('endeavor', ['p1'])
+    updateScore(session.id, { playerId: 'p1', fieldId: 'villes', value: 5 })
+    const updated = getSessionById(session.id)
+    expect(updated?.scores).toHaveLength(1)
+    expect(updated?.scores[0]).toMatchObject({ playerId: 'p1', fieldId: 'villes', value: 5 })
+  })
+
+  it('met à jour un score existant sans doublon', () => {
+    const session = createSession('endeavor', ['p1'])
+    updateScore(session.id, { playerId: 'p1', fieldId: 'villes', value: 5 })
+    updateScore(session.id, { playerId: 'p1', fieldId: 'villes', value: 8 })
+    const updated = getSessionById(session.id)
+    expect(updated?.scores).toHaveLength(1)
+    expect(updated?.scores[0].value).toBe(8)
+  })
+
+  it('distingue les scores par round', () => {
+    const session = createSession('game', ['p1'])
+    updateScore(session.id, { playerId: 'p1', fieldId: 'pts', value: 3, round: 1 })
+    updateScore(session.id, { playerId: 'p1', fieldId: 'pts', value: 5, round: 2 })
+    const updated = getSessionById(session.id)
+    expect(updated?.scores).toHaveLength(2)
+  })
+})
+
+describe('finishSession', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('passe le status à "finished"', () => {
+    const session = createSession('endeavor', ['p1'])
+    expect(getSessionById(session.id)?.status).toBe('in_progress')
+    finishSession(session.id)
+    expect(getSessionById(session.id)?.status).toBe('finished')
+  })
+})

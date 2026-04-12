@@ -1,9 +1,18 @@
+export interface ScoreEntry {
+  playerId: string
+  fieldId: string
+  value: number | boolean
+  round?: number
+}
+
 export interface GameSession {
   id: string
   gameId: string
   players: string[]
   createdAt: string
   status: 'in_progress' | 'finished'
+  scores: ScoreEntry[]
+  currentRound?: number
 }
 
 const STORAGE_KEY = 'panda-sessions'
@@ -17,6 +26,10 @@ function getSessions(): GameSession[] {
   }
 }
 
+function saveSessions(sessions: GameSession[]): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions))
+}
+
 export function createSession(gameId: string, playerIds: string[]): GameSession {
   const session: GameSession = {
     id: crypto.randomUUID(),
@@ -24,12 +37,40 @@ export function createSession(gameId: string, playerIds: string[]): GameSession 
     players: playerIds,
     createdAt: new Date().toISOString(),
     status: 'in_progress',
+    scores: [],
   }
-  const sessions = getSessions()
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...sessions, session]))
+  saveSessions([...getSessions(), session])
   return session
 }
 
 export function getSessionById(id: string): GameSession | undefined {
   return getSessions().find((s) => s.id === id)
+}
+
+export function updateScore(sessionId: string, entry: ScoreEntry): void {
+  const sessions = getSessions()
+  const idx = sessions.findIndex((s) => s.id === sessionId)
+  if (idx === -1) return
+  const session = sessions[idx]
+  const scores = session.scores ?? []
+  const existing = scores.findIndex(
+    (s) =>
+      s.playerId === entry.playerId &&
+      s.fieldId === entry.fieldId &&
+      s.round === entry.round
+  )
+  const updated =
+    existing >= 0
+      ? scores.map((s, i) => (i === existing ? entry : s))
+      : [...scores, entry]
+  sessions[idx] = { ...session, scores: updated }
+  saveSessions(sessions)
+}
+
+export function finishSession(sessionId: string): void {
+  const sessions = getSessions()
+  const idx = sessions.findIndex((s) => s.id === sessionId)
+  if (idx === -1) return
+  sessions[idx] = { ...sessions[idx], status: 'finished' }
+  saveSessions(sessions)
 }
