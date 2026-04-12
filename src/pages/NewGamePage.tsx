@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { searchGames } from '@/lib/games'
-import { getPlayers } from '@/lib/players'
+import { getPlayers, addPlayer } from '@/lib/players'
 import { createSession } from '@/lib/sessions'
 import type { Game } from '@/lib/games'
 
@@ -14,9 +14,20 @@ export default function NewGamePage() {
   const [query, setQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState<Game | null>(null)
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
+  const [players, setPlayers] = useState(() => getPlayers())
+  const [newPlayerName, setNewPlayerName] = useState('')
 
-  const players = getPlayers()
   const filteredGames = searchGames(query)
+
+  function handleAddPlayer(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = newPlayerName.trim()
+    if (!trimmed) return
+    const player = addPlayer(trimmed)
+    setPlayers(getPlayers())
+    setSelectedPlayerIds((prev) => [...prev, player.id])
+    setNewPlayerName('')
+  }
 
   function togglePlayer(id: string) {
     setSelectedPlayerIds((prev) =>
@@ -112,16 +123,29 @@ export default function NewGamePage() {
             <p className="text-xs text-purple-400 text-center">
               Sélectionnez {selectedGame.players.min}–{selectedGame.players.max} joueurs
             </p>
+
+            {/* Ajout rapide inline */}
+            <form onSubmit={handleAddPlayer} className="flex gap-2">
+              <input
+                type="text"
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                placeholder="Nouveau joueur…"
+                aria-label="Nom du nouveau joueur"
+                className="flex-1 h-10 rounded-xl border-2 border-purple-200 px-3 text-sm focus:outline-none focus:border-purple-400 bg-white"
+              />
+              <Button
+                type="submit"
+                disabled={!newPlayerName.trim()}
+                aria-label="Ajouter le joueur"
+                className="h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold"
+              >
+                Ajouter
+              </Button>
+            </form>
+
             {players.length === 0 ? (
-              <p className="text-center text-purple-300 text-sm">
-                Aucun joueur enregistré.{' '}
-                <button
-                  onClick={() => navigate('/players')}
-                  className="underline text-purple-500"
-                >
-                  Ajouter des joueurs
-                </button>
-              </p>
+              <p className="text-center text-purple-300 text-sm">Aucun joueur pour l'instant.</p>
             ) : (
               <ul className="space-y-2" aria-label="Liste des joueurs">
                 {players.map((player) => {
