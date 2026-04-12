@@ -25,6 +25,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center gap-4 w-full max-w-xs">
         {/* Nouvelle partie — CTA principal */}
         <Button
+          onClick={() => navigate('/new-game')}
           className="w-full h-14 text-lg font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200 rounded-2xl"
           aria-label="Créer une nouvelle partie"
         >

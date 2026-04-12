@@ -6,6 +6,7 @@ import HistoryPage from './pages/HistoryPage'
 import SettingsPage from './pages/SettingsPage'
 import GamesPage from './pages/GamesPage'
 import BottomNav from './components/BottomNav'
+import { Navigate } from 'react-router-dom'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/games" element={<GamesPage />} />
+        <Route path="/game/:id" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />
     </BrowserRouter>
