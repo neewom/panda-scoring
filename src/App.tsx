@@ -4,6 +4,7 @@ import PlayersPage from './pages/PlayersPage'
 import NewGamePage from './pages/NewGamePage'
 import HistoryPage from './pages/HistoryPage'
 import SettingsPage from './pages/SettingsPage'
+import GamesPage from './pages/GamesPage'
 import BottomNav from './components/BottomNav'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/games" element={<GamesPage />} />
       </Routes>
       <BottomNav />
     </BrowserRouter>

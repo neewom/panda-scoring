@@ -60,6 +60,16 @@ export default function HomePage() {
         >
           👥 Joueurs
         </Button>
+
+        {/* Jeux */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/games')}
+          className="w-full h-12 text-base font-semibold text-purple-500 hover:bg-purple-50 rounded-2xl"
+          aria-label="Voir la bibliothèque de jeux"
+        >
+          🎲 Bibliothèque de jeux
+        </Button>
       </div>
 
 
