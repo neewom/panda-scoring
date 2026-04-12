@@ -88,7 +88,8 @@ export default function GameSession() {
     navigate(`/game/${session!.id}/results`)
   }
 
-  const playerTotal = computePlayerTotal(game, session.scores, currentPlayer.id)
+  // Total cumulé (per_round seulement)
+  const playerCumulativeTotal = computePlayerTotal(game, session.scores, currentPlayer.id)
 
   // --- Done phase ---
   if (phase === 'done') {
@@ -290,11 +291,13 @@ export default function GameSession() {
             </div>
           )}
 
-          {/* Total temps réel */}
-          <div className="border-t border-purple-50 pt-3 flex justify-between items-center">
-            <span className="text-sm text-purple-400">Total</span>
-            <span className="text-xl font-bold text-purple-700">{playerTotal} pts</span>
-          </div>
+          {/* Total cumulé — per_round uniquement */}
+          {!isEndGame && (
+            <div className="border-t border-purple-50 pt-3 flex justify-between items-center">
+              <span className="text-sm text-purple-400">Total cumulé</span>
+              <span className="text-xl font-bold text-purple-700">{playerCumulativeTotal} pts</span>
+            </div>
+          )}
         </div>
 
         {/* Action */}
