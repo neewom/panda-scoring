@@ -8,7 +8,6 @@ import GamesPage from './pages/GamesPage'
 import GameSession from './pages/GameSession'
 import GameResults from './pages/GameResults'
 import BottomNav from './components/BottomNav'
-import { Navigate } from 'react-router-dom'
 
 function App() {
   return (
