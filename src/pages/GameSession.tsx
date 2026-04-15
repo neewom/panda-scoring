@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
@@ -29,6 +29,13 @@ export default function GameSession() {
   const [playerIndex, setPlayerIndex] = useState(0)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'scoring' | 'round_summary' | 'done'>('scoring')
+
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Autofocus l'input à chaque changement de champ ou de joueur
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [fieldIndex, playerIndex])
 
   if (!session || !game || sessionPlayers.length === 0) {
     return <Navigate to="/" replace />
@@ -68,11 +75,26 @@ export default function GameSession() {
     }
   }
 
+  function handleEndGamePrev() {
+    if (playerIndex > 0) {
+      setPlayerIndex((p) => p - 1)
+    } else if (fieldIndex > 0) {
+      setFieldIndex((f) => f - 1)
+      setPlayerIndex(sessionPlayers.length - 1)
+    }
+  }
+
   function handlePerRoundNext() {
     if (!isLastPlayer) {
       setPlayerIndex((p) => p + 1)
     } else {
       setPhase('round_summary')
+    }
+  }
+
+  function handlePerRoundPrev() {
+    if (playerIndex > 0) {
+      setPlayerIndex((p) => p - 1)
     }
   }
 
@@ -87,6 +109,13 @@ export default function GameSession() {
     finishSession(session!.id)
     navigate(`/game/${session!.id}/results`)
   }
+
+  const isFirstStep = isEndGame
+    ? fieldIndex === 0 && playerIndex === 0
+    : playerIndex === 0
+
+  // Index du premier champ number dans per_round (pour attacher le ref)
+  const firstNumberFieldIndex = fields.findIndex((f) => f.type === 'number')
 
   // Total cumulé (per_round seulement)
   const playerCumulativeTotal = computePlayerTotal(game, session.scores, currentPlayer.id)
@@ -235,6 +264,7 @@ export default function GameSession() {
                 </button>
               ) : (
                 <input
+                  ref={inputRef}
                   type="number"
                   inputMode="numeric"
                   value={
@@ -252,7 +282,7 @@ export default function GameSession() {
           ) : (
             /* per_round: all fields */
             <div className="space-y-3">
-              {fields.map((field) => (
+              {fields.map((field, i) => (
                 <div key={field.id} className="space-y-1">
                   <label className="text-sm text-purple-500">{field.label}</label>
                   {field.type === 'boolean' ? (
@@ -273,6 +303,7 @@ export default function GameSession() {
                     </button>
                   ) : (
                     <input
+                      ref={i === firstNumberFieldIndex ? inputRef : undefined}
                       type="number"
                       inputMode="numeric"
                       value={
@@ -300,13 +331,24 @@ export default function GameSession() {
           )}
         </div>
 
-        {/* Action */}
-        <Button
-          onClick={isEndGame ? handleEndGameNext : handlePerRoundNext}
-          className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
-        >
-          {nextLabel}
-        </Button>
+        {/* Actions */}
+        <div className="flex gap-2">
+          {!isFirstStep && (
+            <Button
+              onClick={isEndGame ? handleEndGamePrev : handlePerRoundPrev}
+              aria-label="Étape précédente"
+              className="h-12 px-4 bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold rounded-2xl"
+            >
+              ← Précédent
+            </Button>
+          )}
+          <Button
+            onClick={isEndGame ? handleEndGameNext : handlePerRoundNext}
+            className="flex-1 h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
+          >
+            {nextLabel}
+          </Button>
+        </div>
 
       </div>
     </div>
