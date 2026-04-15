@@ -11,6 +11,7 @@ import {
   type ScoreEntry,
 } from '@/lib/sessions'
 import { computePlayerTotal } from '@/lib/scoring'
+import { parseExpr } from '@/lib/expr-parser'
 import type { ScoringField } from '@/lib/games'
 
 export default function GameSession() {
@@ -31,6 +32,11 @@ export default function GameSession() {
   const [phase, setPhase] = useState<'scoring' | 'round_summary' | 'done'>('scoring')
 
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Expandable "Détail calcul" : ouvert/fermé par fieldId
+  const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({})
+  // Erreur de parsing par fieldId
+  const [detailErrors, setDetailErrors] = useState<Record<string, boolean>>({})
 
   // Autofocus l'input à chaque changement de champ ou de joueur
   useEffect(() => {
@@ -60,8 +66,44 @@ export default function GameSession() {
   }
 
   function handleScoreChange(field: ScoringField, value: number | boolean, r?: number) {
-    updateScore(session!.id, { playerId: currentPlayer.id, fieldId: field.id, value, round: r })
+    const existing = getScore(currentPlayer.id, field.id, r)
+    updateScore(session!.id, {
+      playerId: currentPlayer.id,
+      fieldId: field.id,
+      value,
+      round: r,
+      detail: existing?.detail, // préserve le détail lors d'une édition manuelle
+    })
     refreshSession()
+  }
+
+  function handleDetailChange(field: ScoringField, expression: string, r?: number) {
+    const existing = getScore(currentPlayer.id, field.id, r)
+    if (expression === '') {
+      updateScore(session!.id, {
+        playerId: currentPlayer.id,
+        fieldId: field.id,
+        value: existing?.value ?? 0,
+        round: r,
+        detail: undefined,
+      })
+      setDetailErrors((prev) => { const next = { ...prev }; delete next[field.id]; return next })
+    } else {
+      const result = parseExpr(expression)
+      updateScore(session!.id, {
+        playerId: currentPlayer.id,
+        fieldId: field.id,
+        value: result.ok ? result.value : (existing?.value ?? 0),
+        round: r,
+        detail: expression,
+      })
+      setDetailErrors((prev) => ({ ...prev, [field.id]: !result.ok }))
+    }
+    refreshSession()
+  }
+
+  function toggleDetail(fieldId: string) {
+    setOpenDetails((prev) => ({ ...prev, [fieldId]: !prev[fieldId] }))
   }
 
   function handleEndGameNext() {
@@ -263,20 +305,30 @@ export default function GameSession() {
                   {getScore(currentPlayer.id, currentField.id)?.value ? 'Oui ✓' : 'Non'}
                 </button>
               ) : (
-                <input
-                  ref={inputRef}
-                  type="number"
-                  inputMode="numeric"
-                  value={
-                    (getScore(currentPlayer.id, currentField.id)?.value as number) ?? ''
-                  }
-                  onChange={(e) =>
-                    handleScoreChange(currentField, Number(e.target.value))
-                  }
-                  placeholder="0"
-                  aria-label={currentField.label}
-                  className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
-                />
+                <>
+                  <input
+                    ref={inputRef}
+                    type="number"
+                    inputMode="numeric"
+                    value={
+                      (getScore(currentPlayer.id, currentField.id)?.value as number) ?? ''
+                    }
+                    onChange={(e) =>
+                      handleScoreChange(currentField, Number(e.target.value))
+                    }
+                    placeholder="0"
+                    aria-label={currentField.label}
+                    className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
+                  />
+                  <DetailCalc
+                    fieldId={currentField.id}
+                    expression={getScore(currentPlayer.id, currentField.id)?.detail ?? ''}
+                    open={!!openDetails[currentField.id]}
+                    hasError={!!detailErrors[currentField.id]}
+                    onToggle={() => toggleDetail(currentField.id)}
+                    onChange={(expr) => handleDetailChange(currentField, expr)}
+                  />
+                </>
               )}
             </div>
           ) : (
@@ -302,20 +354,30 @@ export default function GameSession() {
                         : 'Non'}
                     </button>
                   ) : (
-                    <input
-                      ref={i === firstNumberFieldIndex ? inputRef : undefined}
-                      type="number"
-                      inputMode="numeric"
-                      value={
-                        (getScore(currentPlayer.id, field.id, round)?.value as number) ?? ''
-                      }
-                      onChange={(e) =>
-                        handleScoreChange(field, Number(e.target.value), round)
-                      }
-                      placeholder="0"
-                      aria-label={field.label}
-                      className="w-full h-10 rounded-xl border-2 border-purple-200 px-3 text-center focus:outline-none focus:border-purple-400"
-                    />
+                    <>
+                      <input
+                        ref={i === firstNumberFieldIndex ? inputRef : undefined}
+                        type="number"
+                        inputMode="numeric"
+                        value={
+                          (getScore(currentPlayer.id, field.id, round)?.value as number) ?? ''
+                        }
+                        onChange={(e) =>
+                          handleScoreChange(field, Number(e.target.value), round)
+                        }
+                        placeholder="0"
+                        aria-label={field.label}
+                        className="w-full h-10 rounded-xl border-2 border-purple-200 px-3 text-center focus:outline-none focus:border-purple-400"
+                      />
+                      <DetailCalc
+                        fieldId={field.id}
+                        expression={getScore(currentPlayer.id, field.id, round)?.detail ?? ''}
+                        open={!!openDetails[field.id]}
+                        hasError={!!detailErrors[field.id]}
+                        onToggle={() => toggleDetail(field.id)}
+                        onChange={(expr) => handleDetailChange(field, expr, round)}
+                      />
+                    </>
                   )}
                 </div>
               ))}
@@ -351,6 +413,55 @@ export default function GameSession() {
         </div>
 
       </div>
+    </div>
+  )
+}
+
+// --- Composant interne : expandable "Détail calcul" ---
+
+interface DetailCalcProps {
+  fieldId: string
+  expression: string
+  open: boolean
+  hasError: boolean
+  onToggle: () => void
+  onChange: (expr: string) => void
+}
+
+function DetailCalc({ fieldId, expression, open, hasError, onToggle, onChange }: DetailCalcProps) {
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        onClick={onToggle}
+        tabIndex={-1}
+        aria-expanded={open}
+        aria-controls={`detail-${fieldId}`}
+        className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-600 transition-colors"
+      >
+        <span aria-hidden>{open ? '▾' : '▸'}</span>
+        Détail calcul
+      </button>
+      {open && (
+        <div id={`detail-${fieldId}`} className="space-y-1">
+          <input
+            type="text"
+            tabIndex={-1}
+            value={expression}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="ex: 5+3-2+(3*10)"
+            aria-label={`Détail calcul ${fieldId}`}
+            className={`w-full h-9 rounded-xl border-2 px-3 text-sm focus:outline-none ${
+              hasError
+                ? 'border-red-400 focus:border-red-500'
+                : 'border-purple-200 focus:border-purple-400'
+            }`}
+          />
+          {hasError && (
+            <p className="text-xs text-red-400">Expression invalide</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
