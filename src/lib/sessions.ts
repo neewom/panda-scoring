@@ -3,6 +3,7 @@ export interface ScoreEntry {
   fieldId: string
   value: number | boolean
   round?: number
+  detail?: string
 }
 
 export interface GameSession {

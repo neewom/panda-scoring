@@ -219,3 +219,101 @@ describe('GameSession — autofocus', () => {
     expect(document.activeElement).toBe(input)
   })
 })
+
+describe('GameSession — Détail calcul (intégration)', () => {
+  let sessionId: string
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+    const session = createSession('chateau-combo', ['p1', 'p2'])
+    sessionId = session.id
+  })
+
+  it('saisir "5+3" dans le détail met 8 dans le champ valeur', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Ouvrir le détail calcul
+    await user.click(screen.getByRole('button', { name: /détail calcul/i }))
+
+    // Saisir une expression valide
+    await user.type(screen.getByRole('textbox', { name: /détail calcul/i }), '5+3')
+
+    // La valeur doit être 8
+    expect(screen.getByRole('spinbutton', { name: /carte 1-1/i })).toHaveValue(8)
+  })
+
+  it('expression invalide → champ valeur inchangé + erreur visible', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Pré-remplir une valeur
+    const valueInput = screen.getByRole('spinbutton', { name: /carte 1-1/i })
+    await user.clear(valueInput)
+    await user.type(valueInput, '10')
+
+    // Ouvrir le détail et saisir une expression invalide dès le 1er caractère
+    // (on utilise 'abc' pour éviter qu'un état intermédiaire valide écrase la valeur)
+    await user.click(screen.getByRole('button', { name: /détail calcul/i }))
+    await user.type(screen.getByRole('textbox', { name: /détail calcul/i }), 'abc')
+
+    // La valeur reste 10
+    expect(screen.getByRole('spinbutton', { name: /carte 1-1/i })).toHaveValue(10)
+
+    // L'erreur est visible
+    expect(screen.getByText(/expression invalide/i)).toBeInTheDocument()
+  })
+
+  it('le détail est persisté et réaffiché en revenant sur le champ', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Ouvrir le détail et saisir une expression
+    await user.click(screen.getByRole('button', { name: /détail calcul/i }))
+    await user.type(screen.getByRole('textbox', { name: /détail calcul/i }), '5+3')
+
+    // Avancer vers Bob
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+
+    // Revenir vers Alice — l'expandable reste ouvert (état préservé),
+    // l'expression doit toujours être affichée
+    await user.click(screen.getByRole('button', { name: /étape précédente/i }))
+    expect(screen.getByRole('textbox', { name: /détail calcul/i })).toHaveValue('5+3')
+  })
+
+  it("l'édition manuelle de la valeur n'efface pas le détail", async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Saisir une expression via le détail
+    await user.click(screen.getByRole('button', { name: /détail calcul/i }))
+    await user.type(screen.getByRole('textbox', { name: /détail calcul/i }), '5+3')
+
+    // Éditer la valeur manuellement
+    const valueInput = screen.getByRole('spinbutton', { name: /carte 1-1/i })
+    await user.clear(valueInput)
+    await user.type(valueInput, '99')
+
+    // Le détail est toujours présent
+    expect(screen.getByRole('textbox', { name: /détail calcul/i })).toHaveValue('5+3')
+  })
+
+  it("l'input de valeur garde le focus à l'arrivée même si l'expandable est présent", async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Ouvrir le détail sur le 1er champ
+    await user.click(screen.getByRole('button', { name: /détail calcul/i }))
+
+    // Avancer et revenir (retrigger autofocus)
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /étape précédente/i }))
+
+    // L'input de valeur (pas le détail) a le focus
+    expect(document.activeElement).toBe(
+      screen.getByRole('spinbutton', { name: /carte 1-1/i })
+    )
+  })
+})
