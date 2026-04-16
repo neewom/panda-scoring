@@ -15,9 +15,21 @@ Application de scoring pour jeux de société.
 
 ## Workflow Git
 - Ne jamais pusher directement sur `main`
+- Avant de créer une nouvelle branche, toujours se synchroniser avec main à jour :
+  ```
+  git checkout main
+  git fetch origin
+  git pull --ff-only origin main
+  ```
 - Toujours créer une branche : `feature/xxx` ou `fix/xxx`
 - Toujours créer une PR après le push
 - `main` est la branche de production — Netlify déploie automatiquement à chaque merge
+- Si une branche en cours diverge d'un main qui a avancé, rebase sur `origin/main` plutôt que de repartir de zéro :
+  ```
+  git fetch origin
+  git rebase origin/main
+  git push --force-with-lease
+  ```
 
 ## Conventions de commit
 - `feat:` nouvelle fonctionnalité
