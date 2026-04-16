@@ -16,6 +16,14 @@ export interface ComputedField {
   confident: boolean
 }
 
+export interface TieBreakRule {
+  label: string
+  compare: (
+    aScores: Record<string, number | boolean>,
+    bScores: Record<string, number | boolean>
+  ) => number
+}
+
 export interface Game {
   id: string
   name: string
@@ -25,7 +33,7 @@ export interface Game {
   rounds?: number | 'dynamic'
   scoring: ScoringField[]
   computed: ComputedField[]
-  tiebreak?: string | object[]
+  tieBreak?: TieBreakRule[]
   validated: boolean
   createdAt: string
 }

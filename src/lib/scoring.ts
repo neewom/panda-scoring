@@ -21,12 +21,16 @@ function evalFormula(formula: string, values: Record<string, number | boolean>):
   }
 }
 
-export function computePlayerTotal(
+/**
+ * Returns a map of all scoring field values and computed field values for a player.
+ * The map includes both raw scoring inputs and derived computed values (including 'total').
+ */
+export function computePlayerScores(
   game: Game,
   scores: ScoreEntry[],
   playerId: string,
   round?: number
-): number {
+): Record<string, number | boolean> {
   const playerScores = scores.filter(
     (s) => s.playerId === playerId && (round === undefined || s.round === round)
   )
@@ -40,11 +44,20 @@ export function computePlayerTotal(
         : entry !== undefined ? Number(entry.value) : 0
   }
 
-  let total = 0
   for (const cf of game.computed) {
     const result = evalFormula(cf.formula, { ...values })
     values[cf.id] = result
-    if (cf.id === 'total') total = result
   }
-  return total
+  return values
+}
+
+export function computePlayerTotal(
+  game: Game,
+  scores: ScoreEntry[],
+  playerId: string,
+  round?: number
+): number {
+  const values = computePlayerScores(game, scores, playerId, round)
+  const total = values['total']
+  return typeof total === 'number' ? total : 0
 }
