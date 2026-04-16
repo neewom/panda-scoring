@@ -24,7 +24,9 @@ export default function GameSession() {
 
   const game = session ? getGameById(session.gameId) : undefined
   const allPlayers = getPlayers()
-  const sessionPlayers = allPlayers.filter((p) => session?.players.includes(p.id))
+  const sessionPlayers = (session?.players ?? [])
+    .map((id) => allPlayers.find((p) => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => p !== undefined)
 
   const [fieldIndex, setFieldIndex] = useState(0)
   const [playerIndex, setPlayerIndex] = useState(0)
