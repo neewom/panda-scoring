@@ -219,3 +219,52 @@ describe('GameResults — mise en évidence de la ligne vainqueur', () => {
     expect(winnerRows).toHaveLength(2)
   })
 })
+
+// --- tiebreak_description ---
+
+describe('GameResults — tiebreak_description', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS_2))
+  })
+
+  // Égalité sur Forêt Mixte (pas de tiebreak_description)
+  it('affiche "Victoire partagée" en cas d\'égalité sans tiebreak_description', () => {
+    // Alice : 10 pts, Bob : 10 pts
+    const sessionId = setupForetMixte([5, 5, 0, 0, 0, 0], [0, 0, 5, 5, 0, 0])
+    renderResults(sessionId)
+    expect(screen.getByText('Victoire partagée')).toBeInTheDocument()
+  })
+
+  it('n\'affiche pas "Victoire partagée" quand un vainqueur unique est désigné', () => {
+    // Alice : 21 pts, Bob : 17 pts
+    const sessionId = setupForetMixte([5, 3, 4, 2, 1, 6], [3, 2, 1, 4, 5, 2])
+    renderResults(sessionId)
+    expect(screen.queryByText('Victoire partagée')).not.toBeInTheDocument()
+  })
+
+  // Égalité sur Nokosu Dice (a un tiebreak_description)
+  it('affiche le tiebreak_description en cas d\'égalité pour Nokosu Dice', () => {
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS_2))
+    const session = createSession('nokosu-dice', ['p1', 'p2'])
+    // Alice et Bob : même score sur les 2 rounds
+    updateScore(session.id, { playerId: 'p1', fieldId: 'score', value: 5, round: 1 })
+    updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: 5, round: 1 })
+    updateScore(session.id, { playerId: 'p1', fieldId: 'score', value: 3, round: 2 })
+    updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: 3, round: 2 })
+    renderResults(session.id)
+
+    expect(screen.getByText(/plus grand chiffre sur son dernier dé/i)).toBeInTheDocument()
+  })
+
+  it('n\'affiche pas "Victoire partagée" pour Nokosu Dice en cas d\'égalité', () => {
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS_2))
+    const session = createSession('nokosu-dice', ['p1', 'p2'])
+    updateScore(session.id, { playerId: 'p1', fieldId: 'score', value: 5, round: 1 })
+    updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: 5, round: 1 })
+    renderResults(session.id)
+
+    expect(screen.queryByText('Victoire partagée')).not.toBeInTheDocument()
+  })
+})

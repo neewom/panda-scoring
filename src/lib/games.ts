@@ -35,6 +35,7 @@ export interface Game {
   computed: ComputedField[]
   tieBreak?: TieBreakRule[]
   scoring_notes?: string
+  tiebreak_description?: string
   validated: boolean
   createdAt: string
 }

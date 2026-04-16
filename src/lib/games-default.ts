@@ -66,6 +66,7 @@ export const DEFAULT_GAMES: Game[] = [
       { id: 'total', label: 'Total', formula: 'score', confident: true },
     ],
     scoring_notes: "Chaque joueur joue une fois en tant qu'attaquant. Le nombre de manches est égal au nombre de joueurs.",
+    tiebreak_description: "En cas d'égalité, le joueur ayant le plus grand chiffre sur son dernier dé lors de la dernière manche l'emporte.",
     validated: true,
     createdAt: '2024-01-01T00:00:00.000Z',
   },
