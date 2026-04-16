@@ -316,3 +316,35 @@ describe('GameResults — tableau par manche (per_round, Nokosu Dice)', () => {
     expect(rows[2]).toHaveTextContent('Bob')
   })
 })
+
+describe('GameDetailPage — tiebreak_description', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  function renderDetail(gameId: string) {
+    return render(
+      <MemoryRouter initialEntries={[`/games/${gameId}`]}>
+        <Routes>
+          <Route path="/games/:id" element={<GameDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+  }
+
+  it('Nokosu Dice affiche la règle de tie-break textuelle', () => {
+    renderDetail('nokosu-dice')
+    expect(screen.getByText(/plus grand chiffre sur son dernier dé/i)).toBeInTheDocument()
+  })
+
+  it('Forêt Mixte affiche "Victoire partagée en cas d\'égalité"', () => {
+    renderDetail('foret-mixte-dartmoor')
+    expect(screen.getByText(/victoire partagée en cas d'égalité/i)).toBeInTheDocument()
+  })
+
+  it('Nokosu Dice n\'affiche pas "Victoire partagée en cas d\'égalité"', () => {
+    renderDetail('nokosu-dice')
+    expect(screen.queryByText(/victoire partagée en cas d'égalité/i)).not.toBeInTheDocument()
+  })
+})

@@ -114,6 +114,8 @@ export default function GameDetailPage() {
                 </li>
               ))}
             </ul>
+          ) : game.tiebreak_description ? (
+            <p className="text-sm text-purple-800">{game.tiebreak_description}</p>
           ) : (
             <p className="text-sm text-purple-400">Victoire partagée en cas d'égalité</p>
           )}

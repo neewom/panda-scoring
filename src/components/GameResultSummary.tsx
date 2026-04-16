@@ -88,8 +88,11 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
           {isTie ? 'Égalité' : 'Vainqueur'}
         </p>
         <p className="text-3xl font-extrabold text-purple-700">{formatNames(winnerNames)}</p>
-        {isTie && (
+        {isTie && !tieBreakLabel && !game.tiebreak_description && (
           <p className="text-xs text-amber-500">Victoire partagée</p>
+        )}
+        {isTie && game.tiebreak_description && !tieBreakLabel && (
+          <p className="text-xs text-purple-500">{game.tiebreak_description}</p>
         )}
         {tieBreakLabel && (
           <p className="text-xs text-purple-400">Départagé par : {tieBreakLabel}</p>
