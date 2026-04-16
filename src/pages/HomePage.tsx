@@ -46,6 +46,7 @@ export default function HomePage() {
         {/* Historique */}
         <Button
           variant="ghost"
+          onClick={() => navigate('/history')}
           className="w-full h-12 text-base font-semibold text-pink-600 hover:bg-pink-50 rounded-2xl"
           aria-label="Voir l'historique des parties"
         >

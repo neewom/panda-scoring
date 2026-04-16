@@ -5,7 +5,7 @@ import { getPlayers } from '@/lib/players'
 import { getSessionById } from '@/lib/sessions'
 import GameResultSummary from '@/components/GameResultSummary'
 
-export default function GameResults() {
+export default function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -17,7 +17,7 @@ export default function GameResults() {
     .filter((p): p is NonNullable<typeof p> => p !== undefined)
 
   if (!session || !game || sessionPlayers.length === 0) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/history" replace />
   }
 
   return (
@@ -33,23 +33,14 @@ export default function GameResults() {
         <GameResultSummary game={game} session={session} sessionPlayers={sessionPlayers} />
 
         {/* Actions */}
-        <div className="flex flex-col gap-3">
-          <Button
-            onClick={() => navigate('/new-game')}
-            aria-label="Nouvelle partie"
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
-          >
-            🎮 Nouvelle partie
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/')}
-            aria-label="Retour accueil"
-            className="w-full h-12 font-semibold text-purple-500 hover:bg-purple-50 rounded-2xl"
-          >
-            🏠 Retour accueil
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/history')}
+          aria-label="Retour à l'historique"
+          className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
+        >
+          ← Retour à l'historique
+        </Button>
 
       </div>
     </div>
