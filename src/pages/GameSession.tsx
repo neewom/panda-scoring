@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getGameById } from '@/lib/games'
+import { getGameById, computeRoundCount } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import {
   getSessionById,
@@ -10,7 +10,7 @@ import {
   type GameSession as GameSessionType,
   type ScoreEntry,
 } from '@/lib/sessions'
-import { computePlayerTotal } from '@/lib/scoring'
+import { computePlayerTotal, computePerRoundTotal } from '@/lib/scoring'
 import { parseExpr } from '@/lib/expr-parser'
 import type { ScoringField } from '@/lib/games'
 
@@ -43,7 +43,7 @@ export default function GameSession() {
   // Autofocus l'input à chaque changement de champ ou de joueur
   useEffect(() => {
     inputRef.current?.focus()
-  }, [fieldIndex, playerIndex])
+  }, [fieldIndex, playerIndex, round])
 
   if (!session || !game || sessionPlayers.length === 0) {
     return <Navigate to="/" replace />
@@ -61,6 +61,10 @@ export default function GameSession() {
   const currentField = fields[fieldIndex]
   const isLastField = fieldIndex === fields.length - 1
 
+  // Total number of rounds (null = undefined/dynamic)
+  const totalRounds = computeRoundCount(game, sessionPlayers.length)
+  const isLastRound = totalRounds !== null ? round >= totalRounds : true
+
   function getScore(playerId: string, fieldId: string, r?: number): ScoreEntry | undefined {
     return session!.scores.find(
       (s) => s.playerId === playerId && s.fieldId === fieldId && s.round === r
@@ -74,7 +78,7 @@ export default function GameSession() {
       fieldId: field.id,
       value,
       round: r,
-      detail: existing?.detail, // préserve le détail lors d'une édition manuelle
+      detail: existing?.detail,
     })
     refreshSession()
   }
@@ -108,6 +112,8 @@ export default function GameSession() {
     setOpenDetails((prev) => ({ ...prev, [fieldId]: !prev[fieldId] }))
   }
 
+  // --- end_game navigation ---
+
   function handleEndGameNext() {
     if (!isLastPlayer) {
       setPlayerIndex((p) => p + 1)
@@ -128,10 +134,16 @@ export default function GameSession() {
     }
   }
 
+  // --- per_round navigation ---
+
   function handlePerRoundNext() {
     if (!isLastPlayer) {
       setPlayerIndex((p) => p + 1)
+    } else if (!isLastField) {
+      setFieldIndex((f) => f + 1)
+      setPlayerIndex(0)
     } else {
+      // Last player, last field → round summary
       setPhase('round_summary')
     }
   }
@@ -139,6 +151,14 @@ export default function GameSession() {
   function handlePerRoundPrev() {
     if (playerIndex > 0) {
       setPlayerIndex((p) => p - 1)
+    } else if (fieldIndex > 0) {
+      setFieldIndex((f) => f - 1)
+      setPlayerIndex(sessionPlayers.length - 1)
+    } else if (round > 1) {
+      // Beginning of round → go back to last step of previous round
+      setRound((r) => r - 1)
+      setFieldIndex(fields.length - 1)
+      setPlayerIndex(sessionPlayers.length - 1)
     }
   }
 
@@ -156,35 +176,43 @@ export default function GameSession() {
 
   const isFirstStep = isEndGame
     ? fieldIndex === 0 && playerIndex === 0
-    : playerIndex === 0
+    : round === 1 && fieldIndex === 0 && playerIndex === 0
 
-  // Index du premier champ number dans per_round (pour attacher le ref)
-  const firstNumberFieldIndex = fields.findIndex((f) => f.type === 'number')
-
-  // Total cumulé (per_round seulement)
-  const playerCumulativeTotal = computePlayerTotal(game, session.scores, currentPlayer.id)
+  // Cumulative total for the current player (per_round only)
+  const playerCumulativeTotal = !isEndGame
+    ? computePerRoundTotal(game, session.scores, currentPlayer.id)
+    : 0
 
   // --- Round summary (per_round) ---
   if (phase === 'round_summary') {
-    const maxRounds = typeof game.rounds === 'number' ? game.rounds : null
-    const isLastRound = maxRounds !== null && round >= maxRounds
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
         <div className="w-full max-w-sm space-y-6 text-center">
+          <p className="text-sm text-purple-400">{game.name}</p>
           <h1 className="text-2xl font-bold text-purple-700">Round {round} terminé</h1>
+          {totalRounds && (
+            <p className="text-xs text-purple-400">
+              Round {round} / {totalRounds}
+            </p>
+          )}
           <div className="bg-white rounded-2xl border border-purple-100 divide-y divide-purple-50">
-            {sessionPlayers.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-purple-800">{p.name}</span>
-                <span className="font-bold text-purple-700">
-                  {computePlayerTotal(game, session.scores, p.id, round)} pts
-                </span>
-              </div>
-            ))}
+            {sessionPlayers.map((p) => {
+              const cumulative = Array.from({ length: round }, (_, i) => i + 1).reduce(
+                (sum, r) => sum + computePlayerTotal(game, session.scores, p.id, r),
+                0
+              )
+              return (
+                <div key={p.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="font-medium text-purple-800">{p.name}</span>
+                  <span className="font-bold text-purple-700">{cumulative} pts</span>
+                </div>
+              )
+            })}
           </div>
           {isLastRound ? (
             <Button
               onClick={handleFinish}
+              aria-label="Voir les résultats"
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
             >
               Voir les résultats
@@ -192,6 +220,7 @@ export default function GameSession() {
           ) : (
             <Button
               onClick={handleStartNextRound}
+              aria-label={`Démarrer Round ${round + 1}`}
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
             >
               Démarrer Round {round + 1}
@@ -203,13 +232,13 @@ export default function GameSession() {
   }
 
   // --- Main scoring UI ---
-  const nextLabel = isLastPlayer
-    ? isEndGame
-      ? isLastField
-        ? 'Valider la catégorie'
-        : 'Valider la catégorie'
-      : 'Valider le round'
-    : 'Suivant →'
+  const nextLabel = !isLastPlayer
+    ? 'Suivant →'
+    : isEndGame
+      ? 'Valider la catégorie'
+      : isLastField
+        ? 'Valider le round'
+        : 'Suivant →'
 
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-8 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
@@ -238,6 +267,21 @@ export default function GameSession() {
           </div>
         )}
 
+        {/* Round progress bar (per_round) */}
+        {!isEndGame && totalRounds !== null && (
+          <div className="space-y-1">
+            <p className="text-xs text-purple-400 text-right">
+              Round {round} / {totalRounds}
+            </p>
+            <div className="h-1.5 bg-purple-100 rounded-full">
+              <div
+                className="h-1.5 bg-purple-500 rounded-full transition-all"
+                style={{ width: `${(round / totalRounds) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Player tabs */}
         <div className="flex gap-1 bg-purple-50 rounded-xl p-1">
           {sessionPlayers.map((p, i) => (
@@ -255,107 +299,72 @@ export default function GameSession() {
           ))}
         </div>
 
-        {/* Score form */}
+        {/* Score form — same layout for end_game and per_round (single field at a time) */}
         <div className="bg-white rounded-2xl border border-purple-100 p-4 space-y-4">
           <p className="font-semibold text-purple-800">{currentPlayer.name}</p>
 
-          {isEndGame ? (
-            /* end_game: single field */
-            <div className="space-y-2">
-              <label className="text-sm text-purple-500">{currentField.label}</label>
-              {currentField.type === 'boolean' ? (
-                <button
-                  onClick={() => {
-                    const cur = getScore(currentPlayer.id, currentField.id)
-                    handleScoreChange(currentField, !cur?.value)
-                  }}
-                  className={`w-full h-12 rounded-xl font-semibold transition-colors ${
-                    getScore(currentPlayer.id, currentField.id)?.value
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-purple-50 text-purple-400 border-2 border-purple-200'
-                  }`}
-                >
-                  {getScore(currentPlayer.id, currentField.id)?.value ? 'Oui ✓' : 'Non'}
-                </button>
-              ) : (
-                <>
-                  <input
-                    ref={inputRef}
-                    type="number"
-                    inputMode="numeric"
-                    value={
-                      (getScore(currentPlayer.id, currentField.id)?.value as number) ?? ''
-                    }
-                    onChange={(e) =>
-                      handleScoreChange(currentField, Number(e.target.value))
-                    }
-                    placeholder="0"
-                    aria-label={currentField.label}
-                    className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
-                  />
-                  <DetailCalc
-                    fieldId={currentField.id}
-                    expression={getScore(currentPlayer.id, currentField.id)?.detail ?? ''}
-                    open={!!openDetails[currentField.id]}
-                    hasError={!!detailErrors[currentField.id]}
-                    onToggle={() => toggleDetail(currentField.id)}
-                    onChange={(expr) => handleDetailChange(currentField, expr)}
-                  />
-                </>
-              )}
-            </div>
-          ) : (
-            /* per_round: all fields */
-            <div className="space-y-3">
-              {fields.map((field, i) => (
-                <div key={field.id} className="space-y-1">
-                  <label className="text-sm text-purple-500">{field.label}</label>
-                  {field.type === 'boolean' ? (
-                    <button
-                      onClick={() => {
-                        const cur = getScore(currentPlayer.id, field.id, round)
-                        handleScoreChange(field, !cur?.value, round)
-                      }}
-                      className={`w-full h-10 rounded-xl font-semibold transition-colors ${
-                        getScore(currentPlayer.id, field.id, round)?.value
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-purple-50 text-purple-400 border-2 border-purple-200'
-                      }`}
-                    >
-                      {getScore(currentPlayer.id, field.id, round)?.value
-                        ? 'Oui ✓'
-                        : 'Non'}
-                    </button>
-                  ) : (
-                    <>
-                      <input
-                        ref={i === firstNumberFieldIndex ? inputRef : undefined}
-                        type="number"
-                        inputMode="numeric"
-                        value={
-                          (getScore(currentPlayer.id, field.id, round)?.value as number) ?? ''
-                        }
-                        onChange={(e) =>
-                          handleScoreChange(field, Number(e.target.value), round)
-                        }
-                        placeholder="0"
-                        aria-label={field.label}
-                        className="w-full h-10 rounded-xl border-2 border-purple-200 px-3 text-center focus:outline-none focus:border-purple-400"
-                      />
-                      <DetailCalc
-                        fieldId={field.id}
-                        expression={getScore(currentPlayer.id, field.id, round)?.detail ?? ''}
-                        open={!!openDetails[field.id]}
-                        hasError={!!detailErrors[field.id]}
-                        onToggle={() => toggleDetail(field.id)}
-                        onChange={(expr) => handleDetailChange(field, expr, round)}
-                      />
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="space-y-2">
+            <label className="text-sm text-purple-500">{currentField.label}</label>
+            {currentField.type === 'boolean' ? (
+              <button
+                onClick={() => {
+                  const r = isEndGame ? undefined : round
+                  const cur = getScore(currentPlayer.id, currentField.id, r)
+                  handleScoreChange(currentField, !cur?.value, r)
+                }}
+                className={`w-full h-12 rounded-xl font-semibold transition-colors ${
+                  getScore(currentPlayer.id, currentField.id, isEndGame ? undefined : round)?.value
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-50 text-purple-400 border-2 border-purple-200'
+                }`}
+              >
+                {getScore(currentPlayer.id, currentField.id, isEndGame ? undefined : round)?.value
+                  ? 'Oui ✓'
+                  : 'Non'}
+              </button>
+            ) : (
+              <>
+                <input
+                  ref={inputRef}
+                  type="number"
+                  inputMode="numeric"
+                  value={
+                    (getScore(
+                      currentPlayer.id,
+                      currentField.id,
+                      isEndGame ? undefined : round
+                    )?.value as number) ?? ''
+                  }
+                  onChange={(e) =>
+                    handleScoreChange(
+                      currentField,
+                      Number(e.target.value),
+                      isEndGame ? undefined : round
+                    )
+                  }
+                  placeholder="0"
+                  aria-label={currentField.label}
+                  className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
+                />
+                <DetailCalc
+                  fieldId={currentField.id}
+                  expression={
+                    getScore(
+                      currentPlayer.id,
+                      currentField.id,
+                      isEndGame ? undefined : round
+                    )?.detail ?? ''
+                  }
+                  open={!!openDetails[currentField.id]}
+                  hasError={!!detailErrors[currentField.id]}
+                  onToggle={() => toggleDetail(currentField.id)}
+                  onChange={(expr) =>
+                    handleDetailChange(currentField, expr, isEndGame ? undefined : round)
+                  }
+                />
+              </>
+            )}
+          </div>
 
           {/* Total cumulé — per_round uniquement */}
           {!isEndGame && (

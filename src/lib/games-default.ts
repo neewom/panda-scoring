@@ -53,6 +53,23 @@ export const DEFAULT_GAMES: Game[] = [
     createdAt: '2024-01-01T00:00:00.000Z',
   },
   {
+    id: 'nokosu-dice',
+    name: 'Nokosu Dice',
+    publisher: 'OKAZU Brand',
+    players: { min: 2, max: 5 },
+    scoring_model: 'per_round',
+    rounds: { perPlayer: 1, offset: 0 },
+    scoring: [
+      { id: 'score', label: 'Score', type: 'number', confident: true },
+    ],
+    computed: [
+      { id: 'total', label: 'Total', formula: 'score', confident: true },
+    ],
+    scoring_notes: "Chaque joueur joue une fois en tant qu'attaquant. Le nombre de manches est égal au nombre de joueurs.",
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  },
+  {
     id: 'foret-mixte-dartmoor',
     name: 'Forêt Mixte Dartmoor',
     players: { min: 2, max: 5 },

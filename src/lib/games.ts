@@ -30,10 +30,11 @@ export interface Game {
   publisher?: string
   players: { min: number; max: number }
   scoring_model: 'end_game' | 'per_round' | 'hybrid'
-  rounds?: number | 'dynamic'
+  rounds?: number | { perPlayer: number; offset?: number }
   scoring: ScoringField[]
   computed: ComputedField[]
   tieBreak?: TieBreakRule[]
+  scoring_notes?: string
   validated: boolean
   createdAt: string
 }
@@ -67,4 +68,16 @@ export function searchGames(query: string): Game[] {
   const q = query.trim().toLowerCase()
   if (!q) return getGames()
   return getGames().filter((g) => g.name.toLowerCase().includes(q))
+}
+
+/**
+ * Returns the total number of rounds for a per_round game, or null if not defined.
+ * - number: fixed round count
+ * - { perPlayer, offset? }: rounds = playerCount × perPlayer + (offset ?? 0)
+ */
+export function computeRoundCount(game: Game, playerCount: number): number | null {
+  if (game.rounds === undefined) return null
+  if (typeof game.rounds === 'number') return game.rounds
+  const { perPlayer, offset = 0 } = game.rounds
+  return playerCount * perPlayer + offset
 }

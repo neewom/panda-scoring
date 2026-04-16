@@ -119,6 +119,16 @@ export default function GameDetailPage() {
           )}
         </div>
 
+        {/* Notes de scoring */}
+        {game.scoring_notes && (
+          <div className="bg-white rounded-2xl border border-purple-100 px-4 py-4 space-y-2">
+            <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+              Notes de scoring
+            </p>
+            <p className="text-sm text-purple-700">{game.scoring_notes}</p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2">
           <Button

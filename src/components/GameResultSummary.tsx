@@ -1,4 +1,4 @@
-import { computePlayerTotal, computePlayerScores } from '@/lib/scoring'
+import { computePlayerTotal, computePlayerScores, computePerRoundTotal } from '@/lib/scoring'
 import type { Game } from '@/lib/games'
 import type { Player } from '@/lib/players'
 import type { GameSession } from '@/lib/sessions'
@@ -21,10 +21,15 @@ interface GameResultSummaryProps {
 }
 
 export default function GameResultSummary({ game, session, sessionPlayers }: GameResultSummaryProps) {
+  const isPerRound = game.scoring_model === 'per_round'
+
+  // For per_round, cumulative total; for end_game, standard total
   const ranked = sessionPlayers
     .map((p) => ({
       player: p,
-      total: computePlayerTotal(game, session.scores, p.id),
+      total: isPerRound
+        ? computePerRoundTotal(game, session.scores, p.id)
+        : computePlayerTotal(game, session.scores, p.id),
       scores: computePlayerScores(game, session.scores, p.id),
     }))
     .sort((a, b) => b.total - a.total)
@@ -48,13 +53,31 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
   const winnerNames = winners.map((w) => w.player.name)
   const isTie = winners.length > 1
 
-  const tableCols = [
-    ...game.scoring.map((f) => ({ id: f.id, label: f.label })),
-    ...game.computed
-      .filter((f) => f.id !== 'total')
-      .map((f) => ({ id: f.id, label: f.label ?? f.id })),
-    { id: 'total', label: 'Total' },
-  ]
+  // Table columns — per_round uses rounds as columns, end_game uses scoring fields
+  const perRoundScores = session.scores.filter((s) => s.round !== undefined)
+  const roundsPlayed =
+    isPerRound && perRoundScores.length > 0
+      ? Math.max(...perRoundScores.map((s) => s.round!))
+      : 0
+
+  type TableCol = { id: string; label: string; roundNum?: number }
+
+  const tableCols: TableCol[] = isPerRound
+    ? [
+        ...Array.from({ length: roundsPlayed }, (_, i) => ({
+          id: `round_${i + 1}`,
+          label: `Manche ${i + 1}`,
+          roundNum: i + 1,
+        })),
+        { id: 'total', label: 'Total' },
+      ]
+    : [
+        ...game.scoring.map((f) => ({ id: f.id, label: f.label })),
+        ...game.computed
+          .filter((f) => f.id !== 'total')
+          .map((f) => ({ id: f.id, label: f.label ?? f.id })),
+        { id: 'total', label: 'Total' },
+      ]
 
   return (
     <>
@@ -116,7 +139,7 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
             </tr>
           </thead>
           <tbody>
-            {ranked.map(({ player, scores }) => {
+            {ranked.map(({ player, scores, total }) => {
               const isWinner = winnerIds.has(player.id)
               return (
                 <tr
@@ -133,20 +156,31 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
                   >
                     {player.name}
                   </td>
-                  {tableCols.map((col) => (
-                    <td
-                      key={col.id}
-                      className={`px-3 py-2 text-center whitespace-nowrap ${
-                        col.id === 'total'
-                          ? isWinner
-                            ? 'font-extrabold text-purple-700'
-                            : 'font-bold text-purple-600'
-                          : 'text-purple-800'
-                      }`}
-                    >
-                      {formatCellValue(scores[col.id])}
-                    </td>
-                  ))}
+                  {tableCols.map((col) => {
+                    let cellValue: string | number
+                    if (isPerRound) {
+                      cellValue =
+                        col.roundNum !== undefined
+                          ? computePlayerTotal(game, session.scores, player.id, col.roundNum)
+                          : total
+                    } else {
+                      cellValue = formatCellValue(scores[col.id])
+                    }
+                    return (
+                      <td
+                        key={col.id}
+                        className={`px-3 py-2 text-center whitespace-nowrap ${
+                          col.id === 'total'
+                            ? isWinner
+                              ? 'font-extrabold text-purple-700'
+                              : 'font-bold text-purple-600'
+                            : 'text-purple-800'
+                        }`}
+                      >
+                        {cellValue}
+                      </td>
+                    )
+                  })}
                 </tr>
               )
             })}

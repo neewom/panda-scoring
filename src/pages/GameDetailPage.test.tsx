@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import GamesPage from './GamesPage'
 import GameDetailPage from './GameDetailPage'
 import NewGamePage from './NewGamePage'
+import GameResults from './GameResults'
+import { createSession, updateScore, finishSession } from '@/lib/sessions'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -178,5 +180,139 @@ describe('GameDetailPage — bouton Jouer', () => {
     )
     // Redirigé vers GamesPage
     expect(screen.getByRole('heading', { name: /jeux/i })).toBeInTheDocument()
+  })
+})
+
+describe('GameDetailPage — scoring_notes (Nokosu Dice)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('affiche la section "Notes de scoring" quand scoring_notes est défini', () => {
+    render(
+      <MemoryRouter initialEntries={['/games/nokosu-dice']}>
+        <Routes>
+          <Route path="/games/:id" element={<GameDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText(/notes de scoring/i)).toBeInTheDocument()
+    expect(screen.getByText(/chaque joueur joue une fois/i)).toBeInTheDocument()
+  })
+
+  it('n\'affiche pas la section "Notes de scoring" pour les jeux sans scoring_notes', () => {
+    render(
+      <MemoryRouter initialEntries={['/games/foret-mixte-dartmoor']}>
+        <Routes>
+          <Route path="/games/:id" element={<GameDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.queryByText(/notes de scoring/i)).not.toBeInTheDocument()
+  })
+
+  it('affiche le modèle "Par manche" pour Nokosu Dice', () => {
+    render(
+      <MemoryRouter initialEntries={['/games/nokosu-dice']}>
+        <Routes>
+          <Route path="/games/:id" element={<GameDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Par manche')).toBeInTheDocument()
+  })
+})
+
+describe('GameResults — tableau par manche (per_round, Nokosu Dice)', () => {
+  const PLAYERS_2 = [
+    { id: 'p1', name: 'Alice', createdAt: '' },
+    { id: 'p2', name: 'Bob', createdAt: '' },
+  ]
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS_2))
+  })
+
+  function setupNokosudice(aliceScores: number[], bobScores: number[]): string {
+    const session = createSession('nokosu-dice', ['p1', 'p2'])
+    aliceScores.forEach((v, i) => {
+      updateScore(session.id, { playerId: 'p1', fieldId: 'score', value: v, round: i + 1 })
+    })
+    bobScores.forEach((v, i) => {
+      updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: v, round: i + 1 })
+    })
+    finishSession(session.id)
+    return session.id
+  }
+
+  function renderResults(sessionId: string) {
+    return render(
+      <MemoryRouter initialEntries={[`/game/${sessionId}/results`]}>
+        <Routes>
+          <Route path="/game/:id/results" element={<GameResults />} />
+        </Routes>
+      </MemoryRouter>
+    )
+  }
+
+  it('le tableau affiche les manches comme colonnes (Manche 1, Manche 2) + Total', () => {
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+    expect(screen.getByRole('columnheader', { name: /manche 1/i })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /manche 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /total/i })).toBeInTheDocument()
+  })
+
+  it('la colonne "Total" vient en dernier', () => {
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+    const headers = screen.getAllByRole('columnheader')
+    expect(headers[headers.length - 1]).toHaveTextContent('Total')
+  })
+
+  it('affiche les scores par manche et le total cumulé', () => {
+    // Alice: 5+8=13, Bob: 3+7=10
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+
+    const rows = screen.getAllByRole('row')
+    // rows[0] = thead, rows[1] = Alice (13), rows[2] = Bob (10)
+    expect(rows[1]).toHaveTextContent('Alice')
+    expect(rows[1]).toHaveTextContent('5')  // Manche 1
+    expect(rows[1]).toHaveTextContent('8')  // Manche 2
+    expect(rows[1]).toHaveTextContent('13') // Total
+
+    expect(rows[2]).toHaveTextContent('Bob')
+    expect(rows[2]).toHaveTextContent('3')
+    expect(rows[2]).toHaveTextContent('7')
+    expect(rows[2]).toHaveTextContent('10')
+  })
+
+  it('affiche Alice comme vainqueure avec le bon total cumulé', () => {
+    // Alice: 5+8=13, Bob: 3+7=10
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+    expect(screen.getByText('Vainqueur')).toBeInTheDocument()
+    const winnerBlock = screen.getByText('Vainqueur').closest('div')!
+    expect(within(winnerBlock).getByText('Alice')).toBeInTheDocument()
+  })
+
+  it('la ligne du vainqueur a data-winner="true"', () => {
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+    const winnerRows = document.querySelectorAll('tr[data-winner="true"]')
+    expect(winnerRows).toHaveLength(1)
+    expect(winnerRows[0]).toHaveTextContent('Alice')
+  })
+
+  it('tri décroissant : Alice (13) avant Bob (10)', () => {
+    const sessionId = setupNokosudice([5, 8], [3, 7])
+    renderResults(sessionId)
+    const rows = screen.getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('Alice')
+    expect(rows[2]).toHaveTextContent('Bob')
   })
 })
