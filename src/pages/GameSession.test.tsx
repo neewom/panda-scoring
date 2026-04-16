@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import GameSession from './GameSession'
-import { createSession } from '@/lib/sessions'
+import { createSession, getSessionById } from '@/lib/sessions'
+import { addGame } from '@/lib/games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -25,6 +26,7 @@ function renderSession(sessionId: string) {
     <MemoryRouter initialEntries={[`/game/${sessionId}`]}>
       <Routes>
         <Route path="/game/:id" element={<GameSession />} />
+        <Route path="/game/:id/results" element={<div>Page résultats</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -315,5 +317,57 @@ describe('GameSession — Détail calcul (intégration)', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('spinbutton', { name: /carte 1-1/i })
     )
+  })
+})
+
+describe('GameSession — fin de saisie sans écran intermédiaire (end_game, 1 champ)', () => {
+  // Jeu de test minimal : 1 champ, 2 joueurs
+  // Séquence : Alice → Bob (validation finale → résultats)
+
+  let sessionId: string
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+    addGame({
+      id: 'test-game-1field',
+      name: 'Test 1 champ',
+      players: { min: 2, max: 5 },
+      scoring_model: 'end_game',
+      scoring: [{ id: 'points', label: 'Points', type: 'number', confident: true }],
+      computed: [],
+      validated: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+    })
+    const session = createSession('test-game-1field', ['p1', 'p2'])
+    sessionId = session.id
+  })
+
+  it('après le dernier score, on arrive directement sur la page de résultats sans écran intermédiaire', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Alice (pas le dernier joueur) → Suivant
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+
+    // Bob (dernier joueur, dernier champ) → validation finale
+    await user.click(screen.getByRole('button', { name: /valider la catégorie/i }))
+
+    // Aucun écran "Saisie terminée" — on est directement sur la page de résultats
+    expect(screen.queryByText(/saisie terminée/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/page résultats/i)).toBeInTheDocument()
+  })
+
+  it('la partie est persistée (status finished) au moment de la redirection', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Alice → Suivant, Bob → Valider (validation finale)
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider la catégorie/i }))
+
+    const session = getSessionById(sessionId)
+    expect(session?.status).toBe('finished')
   })
 })
