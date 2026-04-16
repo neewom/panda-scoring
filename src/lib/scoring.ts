@@ -51,6 +51,26 @@ export function computePlayerScores(
   return values
 }
 
+/**
+ * Computes the cumulative total across all rounds for a per_round game.
+ * Sums computePlayerTotal for each distinct round found in the scores.
+ */
+export function computePerRoundTotal(
+  game: Game,
+  scores: ScoreEntry[],
+  playerId: string
+): number {
+  const rounds = [
+    ...new Set(
+      scores
+        .filter((s) => s.playerId === playerId && s.round !== undefined)
+        .map((s) => s.round!)
+    ),
+  ]
+  if (rounds.length === 0) return 0
+  return rounds.reduce((sum, r) => sum + computePlayerTotal(game, scores, playerId, r), 0)
+}
+
 export function computePlayerTotal(
   game: Game,
   scores: ScoreEntry[],

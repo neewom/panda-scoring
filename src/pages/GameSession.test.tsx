@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import GameSession from './GameSession'
-import { createSession, getSessionById } from '@/lib/sessions'
-import { addGame } from '@/lib/games'
+import { createSession, updateScore, getSessionById } from '@/lib/sessions'
+import { addGame, computeRoundCount } from '@/lib/games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -369,5 +369,240 @@ describe('GameSession — fin de saisie sans écran intermédiaire (end_game, 1 
 
     const session = getSessionById(sessionId)
     expect(session?.status).toBe('finished')
+  })
+})
+
+// ============================================================
+// computeRoundCount — tests unitaires
+// ============================================================
+
+describe('computeRoundCount', () => {
+  it('nombre fixe de manches : rounds=10 → 10', () => {
+    expect(computeRoundCount({ rounds: 10 } as Parameters<typeof computeRoundCount>[0], 4)).toBe(10)
+  })
+
+  it('dynamique { perPlayer: 1 } avec 4 joueurs → 4', () => {
+    expect(computeRoundCount({ rounds: { perPlayer: 1 } } as Parameters<typeof computeRoundCount>[0], 4)).toBe(4)
+  })
+
+  it('dynamique { perPlayer: 1, offset: 0 } avec 4 joueurs → 4', () => {
+    expect(computeRoundCount({ rounds: { perPlayer: 1, offset: 0 } } as Parameters<typeof computeRoundCount>[0], 4)).toBe(4)
+  })
+
+  it('dynamique { perPlayer: 2, offset: 1 } avec 3 joueurs → 7', () => {
+    expect(computeRoundCount({ rounds: { perPlayer: 2, offset: 1 } } as Parameters<typeof computeRoundCount>[0], 3)).toBe(7)
+  })
+
+  it('rounds absent → null', () => {
+    expect(computeRoundCount({} as Parameters<typeof computeRoundCount>[0], 4)).toBeNull()
+  })
+})
+
+// ============================================================
+// Helper : jeu per_round minimal pour les tests
+// ============================================================
+
+function setupPerRoundGame() {
+  // 2 joueurs = 2 rounds (perPlayer: 1)
+  addGame({
+    id: 'test-per-round',
+    name: 'Test Per Round',
+    players: { min: 2, max: 4 },
+    scoring_model: 'per_round',
+    rounds: { perPlayer: 1 },
+    scoring: [{ id: 'score', label: 'Score', type: 'number', confident: true }],
+    computed: [{ id: 'total', label: 'Total', formula: 'score', confident: true }],
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  })
+}
+
+// ============================================================
+// GameSession — navigation per_round
+// ============================================================
+
+describe('GameSession — navigation per_round', () => {
+  let sessionId: string
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+    setupPerRoundGame()
+    const session = createSession('test-per-round', ['p1', 'p2'])
+    sessionId = session.id
+  })
+
+  it('le bouton "Précédent" est absent au round 1, champ 0, joueur 0', () => {
+    renderSession(sessionId)
+    expect(screen.queryByRole('button', { name: /étape précédente/i })).not.toBeInTheDocument()
+  })
+
+  it('le bouton "Suivant →" est présent pour le joueur non-dernier', () => {
+    renderSession(sessionId)
+    expect(screen.getByRole('button', { name: /suivant/i })).toBeInTheDocument()
+  })
+
+  it('le label devient "Valider le round" quand dernier joueur, dernier champ', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+    // Avancer vers Bob (dernier joueur, dernier champ)
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    expect(screen.getByRole('button', { name: /valider le round/i })).toBeInTheDocument()
+  })
+
+  it('après "Valider le round", on voit le récapitulatif du round', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /suivant/i })) // → Bob
+    await user.click(screen.getByRole('button', { name: /valider le round/i })) // → round summary
+    expect(screen.getByText(/round 1 terminé/i)).toBeInTheDocument()
+  })
+
+  it('le récapitulatif affiche les totaux cumulés des joueurs', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Alice saisit 10
+    const input = screen.getByRole('spinbutton', { name: /score/i })
+    await user.clear(input)
+    await user.type(input, '10')
+
+    // Avancer → Bob, saisir 7
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    const inputBob = screen.getByRole('spinbutton', { name: /score/i })
+    await user.clear(inputBob)
+    await user.type(inputBob, '7')
+
+    // Valider le round → récapitulatif
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+
+    expect(screen.getByText('10 pts')).toBeInTheDocument()
+    expect(screen.getByText('7 pts')).toBeInTheDocument()
+  })
+
+  it('depuis round summary, "Démarrer Round 2" ouvre le round 2', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+    await user.click(screen.getByRole('button', { name: /démarrer round 2/i }))
+    // Le header affiche "Round 2" et le champ Score est visible
+    expect(screen.getByRole('heading', { level: 2, name: /round 2/i })).toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: /score/i })).toBeInTheDocument()
+  })
+
+  it('depuis round summary du dernier round, le bouton "Voir les résultats" est affiché', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Compléter le round 1
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+    await user.click(screen.getByRole('button', { name: /démarrer round 2/i }))
+
+    // Compléter le round 2 (dernier)
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+
+    expect(screen.getByRole('button', { name: /voir les résultats/i })).toBeInTheDocument()
+  })
+
+  it('navigation arrière depuis joueur > 0 revient au joueur précédent', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /suivant/i })) // → Bob
+    await user.click(screen.getByRole('button', { name: /étape précédente/i })) // → Alice
+    // L'onglet Alice est actif (bg-white) et Précédent est absent (premier step)
+    expect(screen.getByRole('button', { name: /^alice$/i })).toHaveClass('bg-white')
+    expect(screen.queryByRole('button', { name: /étape précédente/i })).not.toBeInTheDocument()
+  })
+
+  it('navigation arrière depuis round 2, champ 0, joueur 0 revient à la dernière étape du round 1', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Compléter round 1
+    await user.click(screen.getByRole('button', { name: /suivant/i })) // → Bob round 1
+    await user.click(screen.getByRole('button', { name: /valider le round/i })) // → round summary
+    await user.click(screen.getByRole('button', { name: /démarrer round 2/i })) // → round 2 Alice
+
+    // Précédent depuis round 2, Alice → devrait aller à Bob, round 1
+    await user.click(screen.getByRole('button', { name: /étape précédente/i }))
+
+    // On est sur Bob, round 1
+    // L'onglet Bob doit être actif et on affiche le header Round 1
+    expect(screen.getByRole('button', { name: /^bob$/i })).toHaveClass('bg-white')
+  })
+})
+
+// ============================================================
+// GameSession — cumulative total per_round
+// ============================================================
+
+describe('GameSession — total cumulé per_round', () => {
+  let sessionId: string
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+    setupPerRoundGame()
+    const session = createSession('test-per-round', ['p1', 'p2'])
+    sessionId = session.id
+    // Pré-remplir le round 1 : Alice=10, Bob=7
+    updateScore(session.id, { playerId: 'p1', fieldId: 'score', value: 10, round: 1 })
+    updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: 7, round: 1 })
+  })
+
+  it('affiche "Total cumulé" uniquement pour les jeux per_round', () => {
+    renderSession(sessionId)
+    expect(screen.getByText(/total cumulé/i)).toBeInTheDocument()
+  })
+
+  it('au round 2, le total cumulé reflète le score du round 1', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Aller au round 2
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+    await user.click(screen.getByRole('button', { name: /démarrer round 2/i }))
+
+    // Alice est au round 2, total cumulé = 10 (son score du round 1)
+    expect(screen.getByText('10 pts')).toBeInTheDocument()
+  })
+})
+
+// ============================================================
+// GameSession — fin de partie per_round + persistance
+// ============================================================
+
+describe('GameSession — fin per_round et persistance', () => {
+  let sessionId: string
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+    setupPerRoundGame()
+    const session = createSession('test-per-round', ['p1', 'p2'])
+    sessionId = session.id
+  })
+
+  it('la partie est marquée "finished" après le dernier round', async () => {
+    renderSession(sessionId)
+    const user = userEvent.setup()
+
+    // Round 1
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+    await user.click(screen.getByRole('button', { name: /démarrer round 2/i }))
+    // Round 2
+    await user.click(screen.getByRole('button', { name: /suivant/i }))
+    await user.click(screen.getByRole('button', { name: /valider le round/i }))
+    await user.click(screen.getByRole('button', { name: /voir les résultats/i }))
+
+    expect(getSessionById(sessionId)?.status).toBe('finished')
   })
 })
