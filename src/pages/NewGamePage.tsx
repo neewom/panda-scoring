@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   DndContext,
   PointerSensor,
@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { searchGames } from '@/lib/games'
+import { searchGames, getGameById } from '@/lib/games'
 import { getPlayers, addPlayer } from '@/lib/players'
 import { createSession } from '@/lib/sessions'
 import type { Game } from '@/lib/games'
@@ -70,9 +70,14 @@ function SortablePlayerChip({ player, onRemove }: SortablePlayerChipProps) {
 
 export default function NewGamePage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const preSelectedGameId = (location.state as { gameId?: string } | null)?.gameId
+
   const [step, setStep] = useState<Step>(1)
   const [query, setQuery] = useState('')
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null)
+  const [selectedGame, setSelectedGame] = useState<Game | null>(() =>
+    preSelectedGameId ? (getGameById(preSelectedGameId) ?? null) : null
+  )
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [players, setPlayers] = useState(() => getPlayers())
   const [newPlayerName, setNewPlayerName] = useState('')

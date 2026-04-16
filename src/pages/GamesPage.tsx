@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getGames, searchGames } from '@/lib/games'
 
 export default function GamesPage() {
   const [query, setQuery] = useState('')
+  const navigate = useNavigate()
   const games = query ? searchGames(query) : getGames()
 
   return (
@@ -27,21 +29,24 @@ export default function GamesPage() {
         ) : (
           <ul className="space-y-2" aria-label="Liste des jeux">
             {games.map((game) => (
-              <li
-                key={game.id}
-                className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100"
-              >
-                <div>
-                  <p className="font-semibold text-purple-800">{game.name}</p>
-                  <p className="text-xs text-purple-400">
-                    {game.players.min}–{game.players.max} joueurs
-                  </p>
-                </div>
-                {game.validated && (
-                  <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                    validé
-                  </span>
-                )}
+              <li key={game.id}>
+                <button
+                  onClick={() => navigate(`/games/${game.id}`)}
+                  aria-label={`Voir la fiche de ${game.name}`}
+                  className="w-full text-left flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100 hover:border-purple-300 transition-colors"
+                >
+                  <div>
+                    <p className="font-semibold text-purple-800">{game.name}</p>
+                    <p className="text-xs text-purple-400">
+                      {game.players.min}–{game.players.max} joueurs
+                    </p>
+                  </div>
+                  {game.validated && (
+                    <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      validé
+                    </span>
+                  )}
+                </button>
               </li>
             ))}
           </ul>
