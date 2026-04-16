@@ -48,6 +48,10 @@ export function getSessionById(id: string): GameSession | undefined {
   return getSessions().find((s) => s.id === id)
 }
 
+export function getFinishedSessions(): GameSession[] {
+  return getSessions().filter((s) => s.status === 'finished')
+}
+
 export function updateScore(sessionId: string, entry: ScoreEntry): void {
   const sessions = getSessions()
   const idx = sessions.findIndex((s) => s.id === sessionId)

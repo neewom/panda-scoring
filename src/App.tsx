@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import PlayersPage from './pages/PlayersPage'
 import NewGamePage from './pages/NewGamePage'
 import HistoryPage from './pages/HistoryPage'
+import HistoryDetailPage from './pages/HistoryDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import GamesPage from './pages/GamesPage'
 import GameSession from './pages/GameSession'
@@ -16,6 +17,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/new-game" element={<NewGamePage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/history/:id" element={<HistoryDetailPage />} />
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/games" element={<GamesPage />} />
