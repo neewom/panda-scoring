@@ -29,7 +29,7 @@ export default function GameSession() {
   const [fieldIndex, setFieldIndex] = useState(0)
   const [playerIndex, setPlayerIndex] = useState(0)
   const [round, setRound] = useState(1)
-  const [phase, setPhase] = useState<'scoring' | 'round_summary' | 'done'>('scoring')
+  const [phase, setPhase] = useState<'scoring' | 'round_summary'>('scoring')
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -113,7 +113,7 @@ export default function GameSession() {
       setFieldIndex((f) => f + 1)
       setPlayerIndex(0)
     } else {
-      setPhase('done')
+      handleFinish()
     }
   }
 
@@ -162,35 +162,6 @@ export default function GameSession() {
   // Total cumulé (per_round seulement)
   const playerCumulativeTotal = computePlayerTotal(game, session.scores, currentPlayer.id)
 
-  // --- Done phase ---
-  if (phase === 'done') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="text-6xl">🏆</div>
-          <h1 className="text-2xl font-bold text-purple-700">Saisie terminée !</h1>
-          <div className="bg-white rounded-2xl border border-purple-100 divide-y divide-purple-50">
-            {sessionPlayers.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-purple-800">{p.name}</span>
-                <span className="font-bold text-purple-700">
-                  {computePlayerTotal(game, session.scores, p.id)} pts
-                </span>
-              </div>
-            ))}
-          </div>
-          <Button
-            onClick={handleFinish}
-            aria-label="Terminer la partie"
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
-          >
-            Terminer la partie
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   // --- Round summary (per_round) ---
   if (phase === 'round_summary') {
     const maxRounds = typeof game.rounds === 'number' ? game.rounds : null
@@ -211,7 +182,7 @@ export default function GameSession() {
           </div>
           {isLastRound ? (
             <Button
-              onClick={() => setPhase('done')}
+              onClick={handleFinish}
               className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
             >
               Voir les résultats
