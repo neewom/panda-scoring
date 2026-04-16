@@ -1,13 +1,72 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { searchGames } from '@/lib/games'
 import { getPlayers, addPlayer } from '@/lib/players'
 import { createSession } from '@/lib/sessions'
 import type { Game } from '@/lib/games'
+import type { Player } from '@/lib/players'
 
 type Step = 1 | 2 | 3
+
+/* ---------- SortablePlayerChip ---------- */
+
+interface SortablePlayerChipProps {
+  player: Player
+  onRemove: (id: string) => void
+}
+
+function SortablePlayerChip({ player, onRemove }: SortablePlayerChipProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: player.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <li ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <div
+        {...attributes}
+        {...listeners}
+        className="flex-1 rounded-2xl px-4 py-3 border border-purple-300 bg-purple-50 cursor-grab active:cursor-grabbing touch-none"
+        aria-label={`Réordonner ${player.name}`}
+      >
+        <span className="font-medium text-purple-800">{player.name}</span>
+      </div>
+      <button
+        onClick={() => onRemove(player.id)}
+        aria-label={`Retirer ${player.name}`}
+        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-purple-400 hover:text-purple-700 hover:bg-purple-100 transition-colors text-lg leading-none"
+      >
+        ✕
+      </button>
+    </li>
+  )
+}
+
+/* ---------- NewGamePage ---------- */
 
 export default function NewGamePage() {
   const navigate = useNavigate()
@@ -20,6 +79,11 @@ export default function NewGamePage() {
 
   const filteredGames = searchGames(query)
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
   function handleAddPlayer(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = newPlayerName.trim()
@@ -30,10 +94,23 @@ export default function NewGamePage() {
     setNewPlayerName('')
   }
 
-  function togglePlayer(id: string) {
-    setSelectedPlayerIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    )
+  function addToSelection(id: string) {
+    setSelectedPlayerIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+  }
+
+  function removeFromSelection(id: string) {
+    setSelectedPlayerIds((prev) => prev.filter((p) => p !== id))
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setSelectedPlayerIds((prev) => {
+        const oldIndex = prev.indexOf(active.id as string)
+        const newIndex = prev.indexOf(over.id as string)
+        return arrayMove(prev, oldIndex, newIndex)
+      })
+    }
   }
 
   const playerCountValid =
@@ -46,6 +123,12 @@ export default function NewGamePage() {
     const session = createSession(selectedGame.id, selectedPlayerIds)
     navigate(`/game/${session.id}`)
   }
+
+  /* Derive ordered lists for step 2 */
+  const availablePlayers = players.filter((p) => !selectedPlayerIds.includes(p.id))
+  const selectedPlayers = selectedPlayerIds
+    .map((id) => players.find((p) => p.id === id))
+    .filter((p): p is Player => p !== undefined)
 
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
@@ -117,7 +200,7 @@ export default function NewGamePage() {
 
         {/* Étape 2 — Sélectionner les joueurs */}
         {step === 2 && selectedGame && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <p className="text-sm font-semibold text-purple-500 uppercase tracking-wide">
               Étape 2 — Joueurs
             </p>
@@ -125,50 +208,88 @@ export default function NewGamePage() {
               Sélectionnez {selectedGame.players.min}–{selectedGame.players.max} joueurs
             </p>
 
-            {/* Ajout rapide inline */}
-            <form onSubmit={handleAddPlayer} className="flex gap-2">
-              <input
-                type="text"
-                value={newPlayerName}
-                onChange={(e) => setNewPlayerName(e.target.value)}
-                placeholder="Nouveau joueur…"
-                aria-label="Nom du nouveau joueur"
-                className="flex-1 h-10 rounded-xl border-2 border-purple-200 px-3 text-sm focus:outline-none focus:border-purple-400 bg-white"
-              />
-              <Button
-                type="submit"
-                disabled={!newPlayerName.trim()}
-                aria-label="Ajouter le joueur"
-                className="h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold"
-              >
-                Ajouter
-              </Button>
-            </form>
+            {/* Section "Ordre de jeu" */}
+            {selectedPlayers.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+                  Ordre de jeu
+                </p>
+                {selectedPlayers.length >= 2 && (
+                  <p className="text-xs text-purple-400">Glissez pour réorganiser</p>
+                )}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={selectedPlayerIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ul className="space-y-2" aria-label="Ordre de jeu">
+                      {selectedPlayers.map((player) => (
+                        <SortablePlayerChip
+                          key={player.id}
+                          player={player}
+                          onRemove={removeFromSelection}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            )}
 
-            {players.length === 0 ? (
-              <p className="text-center text-purple-300 text-sm">Aucun joueur pour l'instant.</p>
-            ) : (
-              <ul className="space-y-2" aria-label="Liste des joueurs">
-                {players.map((player) => {
-                  const selected = selectedPlayerIds.includes(player.id)
-                  return (
-                    <li key={player.id}>
-                      <button
-                        onClick={() => togglePlayer(player.id)}
-                        aria-pressed={selected}
-                        className={`w-full text-left rounded-2xl px-4 py-3 border transition-colors ${
-                          selected
-                            ? 'border-purple-400 bg-purple-50'
-                            : 'border-purple-100 bg-white hover:border-purple-200'
-                        }`}
-                      >
+            {/* Section "Joueurs disponibles" */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+                Joueurs disponibles
+              </p>
+
+              {/* Ajout rapide inline */}
+              <form onSubmit={handleAddPlayer} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  placeholder="Nouveau joueur…"
+                  aria-label="Nom du nouveau joueur"
+                  className="flex-1 h-10 rounded-xl border-2 border-purple-200 px-3 text-sm focus:outline-none focus:border-purple-400 bg-white"
+                />
+                <Button
+                  type="submit"
+                  disabled={!newPlayerName.trim()}
+                  aria-label="Ajouter le joueur"
+                  className="h-10 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold"
+                >
+                  Ajouter
+                </Button>
+              </form>
+
+              {availablePlayers.length === 0 ? (
+                <p className="text-center text-purple-300 text-sm">
+                  Tous les joueurs sont sélectionnés.
+                </p>
+              ) : (
+                <ul className="space-y-2" aria-label="Joueurs disponibles">
+                  {availablePlayers.map((player) => (
+                    <li key={player.id} className="flex items-center gap-2">
+                      <div className="flex-1 rounded-2xl px-4 py-3 border border-purple-100 bg-white">
                         <span className="font-medium text-purple-800">{player.name}</span>
+                      </div>
+                      <button
+                        onClick={() => addToSelection(player.id)}
+                        aria-label={`Ajouter ${player.name}`}
+                        className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-purple-500 hover:text-purple-700 hover:bg-purple-100 transition-colors text-xl leading-none font-bold"
+                      >
+                        +
                       </button>
                     </li>
-                  )
-                })}
-              </ul>
-            )}
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -212,13 +333,11 @@ export default function NewGamePage() {
               <div>
                 <p className="text-xs text-purple-400">Joueurs</p>
                 <ul className="mt-1 space-y-1">
-                  {players
-                    .filter((p) => selectedPlayerIds.includes(p.id))
-                    .map((p) => (
-                      <li key={p.id} className="font-medium text-purple-700">
-                        {p.name}
-                      </li>
-                    ))}
+                  {selectedPlayers.map((p) => (
+                    <li key={p.id} className="font-medium text-purple-700">
+                      {p.name}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
