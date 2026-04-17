@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computePlayerTotal } from './scoring'
+import { buildCustomGame } from './games'
 import { DEFAULT_GAMES } from './games-default'
 import type { ScoreEntry } from './sessions'
 
@@ -67,5 +68,43 @@ describe('computePlayerTotal', () => {
     ]
     expect(computePlayerTotal(foretMixte, scores, 'p1')).toBe(10)
     expect(computePlayerTotal(foretMixte, scores, 'p2')).toBe(5)
+  })
+})
+
+describe('buildCustomGame + computePlayerTotal', () => {
+  it('calcule le total pour un jeu custom avec des catégories classiques', () => {
+    const game = buildCustomGame({
+      name: 'Mon Jeu',
+      playersMin: 2,
+      playersMax: 4,
+      scoringModel: 'end_game',
+      categories: [
+        { label: 'Points', type: 'number' },
+        { label: 'Bonus', type: 'number' },
+      ],
+    })
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: game.scoring[0].id, value: 10 },
+      { playerId: 'p1', fieldId: game.scoring[1].id, value: 5 },
+    ]
+    expect(computePlayerTotal(game, scores, 'p1')).toBe(15)
+  })
+
+  it('calcule le total pour un jeu custom dont les catégories commencent par un chiffre', () => {
+    const game = buildCustomGame({
+      name: 'Mon Jeu',
+      playersMin: 2,
+      playersMax: 4,
+      scoringModel: 'end_game',
+      categories: [
+        { label: '1er critère', type: 'number' },
+        { label: '2e critère', type: 'number' },
+      ],
+    })
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: game.scoring[0].id, value: 7 },
+      { playerId: 'p1', fieldId: game.scoring[1].id, value: 3 },
+    ]
+    expect(computePlayerTotal(game, scores, 'p1')).toBe(10)
   })
 })

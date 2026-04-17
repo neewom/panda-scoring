@@ -93,7 +93,8 @@ function slugifyLabel(label: string, index: number): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '')
-  return base || `field_${index}`
+  const slug = base || `field_${index}`
+  return /^[0-9]/.test(slug) ? `f_${slug}` : slug
 }
 
 export function buildCustomGame(input: CustomGameInput): Game {
