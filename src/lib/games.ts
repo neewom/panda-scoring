@@ -85,28 +85,15 @@ export interface CustomGameInput {
   scoringNotes?: string
 }
 
-function slugifyLabel(label: string, index: number): string {
-  const base = label
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-  const slug = base || `field_${index}`
-  return /^[0-9]/.test(slug) ? `f_${slug}` : slug
-}
-
 export function buildCustomGame(input: CustomGameInput): Game {
-  const usedIds = new Set<string>()
-  const scoring: ScoringField[] = input.categories.map((cat, i) => {
-    let id = slugifyLabel(cat.label, i)
-    let unique = id
-    let counter = 2
-    while (usedIds.has(unique)) unique = `${id}_${counter++}`
-    usedIds.add(unique)
-    return { id: unique, label: cat.label, type: cat.type, confident: true }
-  })
+  // Use positional IDs (field_0, field_1, ...) to guarantee valid JS identifiers
+  // regardless of category label content. Labels are only used for display.
+  const scoring: ScoringField[] = input.categories.map((cat, i) => ({
+    id: `field_${i}`,
+    label: cat.label,
+    type: cat.type,
+    confident: true,
+  }))
 
   const numberIds = scoring.filter((f) => f.type === 'number').map((f) => f.id)
   const totalFormula = numberIds.length > 0 ? numberIds.join(' + ') : '0'
