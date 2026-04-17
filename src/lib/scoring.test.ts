@@ -72,6 +72,24 @@ describe('computePlayerTotal', () => {
 })
 
 describe('buildCustomGame + computePlayerTotal', () => {
+  it('génère des IDs positionnels field_N indépendants du label', () => {
+    const game = buildCustomGame({
+      name: 'Test',
+      playersMin: 2,
+      playersMax: 4,
+      scoringModel: 'end_game',
+      categories: [
+        { label: '1', type: 'number' },
+        { label: 'Sanctuaires', type: 'number' },
+        { label: '€ points', type: 'number' },
+      ],
+    })
+    expect(game.scoring[0].id).toBe('field_0')
+    expect(game.scoring[1].id).toBe('field_1')
+    expect(game.scoring[2].id).toBe('field_2')
+    expect(game.computed[0].formula).toBe('field_0 + field_1 + field_2')
+  })
+
   it('calcule le total pour un jeu custom avec des catégories classiques', () => {
     const game = buildCustomGame({
       name: 'Mon Jeu',
@@ -106,5 +124,38 @@ describe('buildCustomGame + computePlayerTotal', () => {
       { playerId: 'p1', fieldId: game.scoring[1].id, value: 3 },
     ]
     expect(computePlayerTotal(game, scores, 'p1')).toBe(10)
+  })
+
+  it('Faraway : 8 catégories chiffres + Sanctuaires — simule le round-trip localStorage', () => {
+    // Reproduit exactement le cas signalé : labels "1","2",...,"8","Sanctuaires"
+    const gameRaw = buildCustomGame({
+      name: 'Faraway',
+      playersMin: 2,
+      playersMax: 6,
+      scoringModel: 'end_game',
+      categories: [
+        { label: '1', type: 'number' },
+        { label: '2', type: 'number' },
+        { label: '3', type: 'number' },
+        { label: '4', type: 'number' },
+        { label: '5', type: 'number' },
+        { label: '6', type: 'number' },
+        { label: '7', type: 'number' },
+        { label: '8', type: 'number' },
+        { label: 'Sanctuaires', type: 'number' },
+      ],
+    })
+    // Simule le round-trip JSON (localStorage)
+    const game = JSON.parse(JSON.stringify(gameRaw))
+
+    // Les scores sont stockés avec les field IDs du jeu (comme le fait GameSession.tsx)
+    const scores: ScoreEntry[] = game.scoring.map((f: { id: string }, i: number) => ({
+      playerId: 'p1',
+      fieldId: f.id,
+      value: i + 1, // 1, 2, 3, 4, 5, 6, 7, 8, 9
+    }))
+
+    // Total attendu : 1+2+3+4+5+6+7+8+9 = 45
+    expect(computePlayerTotal(game, scores, 'p1')).toBe(45)
   })
 })
