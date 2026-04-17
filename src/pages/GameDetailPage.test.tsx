@@ -244,7 +244,7 @@ describe('GameResults — tableau par manche (per_round, Nokosu Dice)', () => {
     bobScores.forEach((v, i) => {
       updateScore(session.id, { playerId: 'p2', fieldId: 'score', value: v, round: i + 1 })
     })
-    finishSession(session.id)
+    finishSession(session.id, { p1: 'Alice', p2: 'Bob' })
     return session.id
   }
 

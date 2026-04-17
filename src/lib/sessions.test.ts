@@ -46,7 +46,7 @@ describe('sessions', () => {
   })
 })
 
-import { updateScore, finishSession } from './sessions'
+import { updateScore, finishSession, resolveSessionPlayers } from './sessions'
 
 describe('updateScore', () => {
   beforeEach(() => {
@@ -89,7 +89,62 @@ describe('finishSession', () => {
   it('passe le status à "finished"', () => {
     const session = createSession('endeavor', ['p1'])
     expect(getSessionById(session.id)?.status).toBe('in_progress')
-    finishSession(session.id)
+    finishSession(session.id, { p1: 'Alice' })
     expect(getSessionById(session.id)?.status).toBe('finished')
+  })
+
+  it('stocke les noms des joueurs en dur dans playerNames', () => {
+    const session = createSession('endeavor', ['p1', 'p2'])
+    finishSession(session.id, { p1: 'Alice', p2: 'Bob' })
+    const saved = getSessionById(session.id)
+    expect(saved?.playerNames).toEqual({ p1: 'Alice', p2: 'Bob' })
+  })
+})
+
+describe('resolveSessionPlayers', () => {
+  const PLAYERS = [
+    { id: 'p1', name: 'Alice', createdAt: '' },
+    { id: 'p2', name: 'Bob', createdAt: '' },
+  ]
+
+  it('utilise le nom dénormalisé quand playerNames est présent', () => {
+    const session = {
+      id: 's1', gameId: 'g', players: ['p1', 'p2'],
+      playerNames: { p1: 'Alice (ancienne)', p2: 'Bob (ancien)' },
+      createdAt: '', status: 'finished' as const, scores: [],
+    }
+    const result = resolveSessionPlayers(session, PLAYERS)
+    expect(result[0].name).toBe('Alice (ancienne)')
+    expect(result[1].name).toBe('Bob (ancien)')
+    expect(result[0].deleted).toBeUndefined()
+  })
+
+  it('utilise le nom de la base quand playerNames est absent (ancienne partie)', () => {
+    const session = {
+      id: 's1', gameId: 'g', players: ['p1', 'p2'],
+      createdAt: '', status: 'finished' as const, scores: [],
+    }
+    const result = resolveSessionPlayers(session, PLAYERS)
+    expect(result[0].name).toBe('Alice')
+    expect(result[1].name).toBe('Bob')
+  })
+
+  it('retourne "Joueur supprimé" pour un joueur absent de la base', () => {
+    const session = {
+      id: 's1', gameId: 'g', players: ['p1', 'p99'],
+      createdAt: '', status: 'finished' as const, scores: [],
+    }
+    const result = resolveSessionPlayers(session, PLAYERS)
+    expect(result[1].name).toBe('Joueur supprimé')
+    expect(result[1].deleted).toBe(true)
+  })
+
+  it('conserve l\'id du joueur supprimé pour le calcul des scores', () => {
+    const session = {
+      id: 's1', gameId: 'g', players: ['p99'],
+      createdAt: '', status: 'finished' as const, scores: [],
+    }
+    const result = resolveSessionPlayers(session, PLAYERS)
+    expect(result[0].id).toBe('p99')
   })
 })

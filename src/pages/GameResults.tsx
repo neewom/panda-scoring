@@ -2,7 +2,7 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
-import { getSessionById } from '@/lib/sessions'
+import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
 import GameResultSummary from '@/components/GameResultSummary'
 
 export default function GameResults() {
@@ -12,9 +12,7 @@ export default function GameResults() {
   const session = id ? getSessionById(id) : undefined
   const game = session ? getGameById(session.gameId) : undefined
   const allPlayers = getPlayers()
-  const sessionPlayers = (session?.players ?? [])
-    .map((pid) => allPlayers.find((p) => p.id === pid))
-    .filter((p): p is NonNullable<typeof p> => p !== undefined)
+  const sessionPlayers = session ? resolveSessionPlayers(session, allPlayers) : []
 
   if (!session || !game || sessionPlayers.length === 0) {
     return <Navigate to="/" replace />

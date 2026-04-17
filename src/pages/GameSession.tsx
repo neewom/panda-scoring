@@ -170,7 +170,9 @@ export default function GameSession() {
   }
 
   function handleFinish() {
-    finishSession(session!.id)
+    const playerNamesMap: Record<string, string> = {}
+    sessionPlayers.forEach((p) => { playerNamesMap[p.id] = p.name })
+    finishSession(session!.id, playerNamesMap)
     navigate(`/game/${session!.id}/results`)
   }
 
