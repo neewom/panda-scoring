@@ -44,7 +44,7 @@ export interface Game {
 
 const STORAGE_KEY = 'panda-custom-games'
 
-function getCustomGames(): Game[] {
+export function getCustomGames(): Game[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     return raw ? (JSON.parse(raw) as Game[]) : []
@@ -59,6 +59,10 @@ export function getGames(): Game[] {
 
 export function getGameById(id: string): Game | undefined {
   return getGames().find((g) => g.id === id)
+}
+
+export function clearCustomGames(): void {
+  localStorage.removeItem(STORAGE_KEY)
 }
 
 export function addGame(game: Game): void {

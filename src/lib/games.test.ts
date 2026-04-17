@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, type Game } from './games'
+import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, getCustomGames, clearCustomGames, type Game } from './games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -104,6 +104,49 @@ describe('games', () => {
     }
     addGame(custom)
     expect(getGameById('custom-1')?.name).toBe('Custom')
+  })
+})
+
+describe('getCustomGames / clearCustomGames', () => {
+  const CUSTOM: Game = {
+    id: 'custom-test',
+    name: 'Custom Test',
+    players: { min: 2, max: 4 },
+    scoring_model: 'end_game',
+    scoring: [],
+    computed: [],
+    validated: true,
+    createdAt: new Date().toISOString(),
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('getCustomGames retourne une liste vide sans jeu custom', () => {
+    expect(getCustomGames()).toEqual([])
+  })
+
+  it('getCustomGames retourne uniquement les jeux custom (pas les hardcodés)', () => {
+    addGame(CUSTOM)
+    const custom = getCustomGames()
+    expect(custom).toHaveLength(1)
+    expect(custom[0].id).toBe('custom-test')
+    expect(custom.find((g) => g.id === 'endeavor')).toBeUndefined()
+  })
+
+  it('clearCustomGames supprime uniquement les jeux custom', () => {
+    addGame(CUSTOM)
+    expect(getCustomGames()).toHaveLength(1)
+    clearCustomGames()
+    expect(getCustomGames()).toHaveLength(0)
+    expect(getGames().find((g) => g.id === 'endeavor')).toBeDefined()
+  })
+
+  it('clearCustomGames sur une liste vide ne génère pas d\'erreur', () => {
+    expect(() => clearCustomGames()).not.toThrow()
+    expect(getCustomGames()).toEqual([])
   })
 })
 
