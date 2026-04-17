@@ -33,7 +33,7 @@ function setupForetMixte(
     updateScore(session.id, { playerId: 'p1', fieldId, value: p1Scores[i] })
     updateScore(session.id, { playerId: 'p2', fieldId, value: p2Scores[i] })
   })
-  finishSession(session.id)
+  finishSession(session.id, { p1: 'Alice', p2: 'Bob' })
 
   // Override createdAt if provided (for ordering tests)
   if (createdAt) {
@@ -127,7 +127,8 @@ describe('HistoryPage — liste des parties', () => {
   it('chaque carte affiche les noms des joueurs séparés par des virgules', () => {
     setupForetMixte([5, 3, 4, 2, 1, 6], [3, 2, 1, 4, 5, 2])
     renderHistory()
-    expect(screen.getByText('Alice, Bob')).toBeInTheDocument()
+    const card = screen.getByRole('button', { name: /voir le détail/i })
+    expect(card).toHaveTextContent('Alice, Bob')
   })
 
   it('chaque carte affiche le vainqueur unique avec 🏆', () => {
@@ -225,5 +226,138 @@ describe('HistoryDetailPage — détail d\'une partie', () => {
     )
     // Redirigé vers HistoryPage (état vide)
     expect(screen.getByText(/aucune partie jouée pour le moment/i)).toBeInTheDocument()
+  })
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// Dénormalisation des noms de joueurs
+// ────────────────────────────────────────────────────────────────────────────
+
+describe('HistoryPage — noms dénormalisés', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+  })
+
+  it('affiche le nom dénormalisé même si le joueur a été renommé en base', () => {
+    // Crée et termine une partie avec Alice et Bob
+    const session = createSession('foret-mixte-dartmoor', ['p1', 'p2'])
+    FORET_FIELDS.forEach((fieldId, i) => {
+      updateScore(session.id, { playerId: 'p1', fieldId, value: i + 1 })
+      updateScore(session.id, { playerId: 'p2', fieldId, value: 0 })
+    })
+    finishSession(session.id, { p1: 'Alice', p2: 'Bob' })
+
+    // Renomme Alice en base (simule un renommage après la partie)
+    const updatedPlayers = [
+      { id: 'p1', name: 'Alice Renommée', createdAt: '' },
+      { id: 'p2', name: 'Bob', createdAt: '' },
+    ]
+    localStorageMock.setItem('panda-players', JSON.stringify(updatedPlayers))
+
+    renderHistory()
+    // L'historique doit afficher l'ancien nom, pas le nouveau
+    const card = screen.getByRole('button', { name: /voir le détail/i })
+    expect(card).toHaveTextContent('Alice, Bob')
+    expect(card).not.toHaveTextContent('Alice Renommée')
+  })
+
+  it('affiche le nom depuis la base pour une ancienne partie sans playerNames', () => {
+    // Injecte directement une session sans playerNames (ancienne partie)
+    const raw = JSON.stringify([{
+      id: 'legacy-1',
+      gameId: 'foret-mixte-dartmoor',
+      players: ['p1', 'p2'],
+      createdAt: new Date().toISOString(),
+      status: 'finished',
+      scores: FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p1', fieldId, value: i + 1 }))
+        .concat(FORET_FIELDS.map((fieldId) => ({ playerId: 'p2', fieldId, value: 0 }))),
+    }])
+    localStorageMock.setItem('panda-sessions', raw)
+
+    renderHistory()
+    const card = screen.getByRole('button', { name: /voir le détail/i })
+    expect(card).toHaveTextContent('Alice, Bob')
+  })
+
+  it('affiche "Joueur supprimé" pour une ancienne partie avec joueur effacé', () => {
+    // Injecte une session avec un joueur (p99) qui n'existe plus en base
+    const raw = JSON.stringify([{
+      id: 'legacy-2',
+      gameId: 'foret-mixte-dartmoor',
+      players: ['p1', 'p99'],
+      createdAt: new Date().toISOString(),
+      status: 'finished',
+      scores: FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p1', fieldId, value: i + 1 }))
+        .concat(FORET_FIELDS.map((fieldId) => ({ playerId: 'p99', fieldId, value: 0 }))),
+    }])
+    localStorageMock.setItem('panda-sessions', raw)
+
+    renderHistory()
+    expect(screen.getByText(/Joueur supprimé/)).toBeInTheDocument()
+  })
+
+  it('un joueur supprimé peut être vainqueur si son score est le plus haut', () => {
+    // p99 (joueur supprimé) a un score plus élevé que p1 (Alice)
+    const raw = JSON.stringify([{
+      id: 'legacy-3',
+      gameId: 'foret-mixte-dartmoor',
+      players: ['p1', 'p99'],
+      createdAt: new Date().toISOString(),
+      status: 'finished',
+      scores: FORET_FIELDS.map((fieldId) => ({ playerId: 'p1', fieldId, value: 0 }))
+        .concat(FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p99', fieldId, value: i + 5 }))),
+    }])
+    localStorageMock.setItem('panda-sessions', raw)
+
+    renderHistory()
+    expect(screen.getByText(/🏆 Joueur supprimé/)).toBeInTheDocument()
+  })
+})
+
+describe('HistoryDetailPage — joueur supprimé', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+    localStorageMock.setItem('panda-players', JSON.stringify(PLAYERS))
+  })
+
+  it('les scores d\'un joueur supprimé sont visibles dans le tableau récapitulatif', () => {
+    // p99 (supprimé) a des scores dans la partie
+    const raw = JSON.stringify([{
+      id: 'legacy-4',
+      gameId: 'foret-mixte-dartmoor',
+      players: ['p1', 'p99'],
+      createdAt: new Date().toISOString(),
+      status: 'finished',
+      scores: FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p1', fieldId, value: i + 1 }))
+        .concat(FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p99', fieldId, value: i + 2 }))),
+    }])
+    localStorageMock.setItem('panda-sessions', raw)
+
+    renderDetail('legacy-4')
+    // La ligne "Joueur supprimé" doit apparaître dans le tableau
+    const rows = document.querySelectorAll('tbody tr')
+    expect(rows).toHaveLength(2)
+    const deletedRow = Array.from(rows).find((r) => r.textContent?.includes('Joueur supprimé'))
+    expect(deletedRow).toBeTruthy()
+  })
+
+  it('un joueur supprimé affiché comme vainqueur si son score est le plus haut', () => {
+    const raw = JSON.stringify([{
+      id: 'legacy-5',
+      gameId: 'foret-mixte-dartmoor',
+      players: ['p1', 'p99'],
+      createdAt: new Date().toISOString(),
+      status: 'finished',
+      scores: FORET_FIELDS.map((fieldId) => ({ playerId: 'p1', fieldId, value: 0 }))
+        .concat(FORET_FIELDS.map((fieldId, i) => ({ playerId: 'p99', fieldId, value: i + 5 }))),
+    }])
+    localStorageMock.setItem('panda-sessions', raw)
+
+    renderDetail('legacy-5')
+    const winnerBlock = screen.getByText('Vainqueur').closest('div')!
+    expect(winnerBlock).toHaveTextContent('Joueur supprimé')
   })
 })

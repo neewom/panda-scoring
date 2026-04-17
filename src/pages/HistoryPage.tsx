@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getFinishedSessions } from '@/lib/sessions'
+import { getFinishedSessions, resolveSessionPlayers } from '@/lib/sessions'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import { computePlayerTotal } from '@/lib/scoring'
@@ -55,9 +55,7 @@ export default function HistoryPage() {
             const game = getGameById(session.gameId)
             if (!game) return null
 
-            const sessionPlayers = session.players
-              .map((id) => allPlayers.find((p) => p.id === id))
-              .filter((p): p is NonNullable<typeof p> => p !== undefined)
+            const sessionPlayers = resolveSessionPlayers(session, allPlayers)
 
             const ranked = sessionPlayers
               .map((p) => ({
@@ -88,7 +86,14 @@ export default function HistoryPage() {
                     </p>
                   </div>
                   <p className="text-sm text-purple-500">
-                    {sessionPlayers.map((p) => p.name).join(', ')}
+                    {sessionPlayers.map((p, i) => (
+                      <span key={p.id}>
+                        {i > 0 && ', '}
+                        <span className={p.deleted ? 'italic text-purple-300' : undefined}>
+                          {p.name}
+                        </span>
+                      </span>
+                    ))}
                   </p>
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-amber-600">{winnerLabel}</p>

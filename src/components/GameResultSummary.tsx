@@ -1,7 +1,6 @@
 import { computePlayerTotal, computePlayerScores, computePerRoundTotal } from '@/lib/scoring'
 import type { Game } from '@/lib/games'
-import type { Player } from '@/lib/players'
-import type { GameSession } from '@/lib/sessions'
+import type { GameSession, SessionPlayer } from '@/lib/sessions'
 
 function formatNames(names: string[]): string {
   if (names.length === 1) return names[0]
@@ -17,7 +16,7 @@ function formatCellValue(value: number | boolean | undefined): string | number {
 interface GameResultSummaryProps {
   game: Game
   session: GameSession
-  sessionPlayers: Player[]
+  sessionPlayers: SessionPlayer[]
 }
 
 export default function GameResultSummary({ game, session, sessionPlayers }: GameResultSummaryProps) {
@@ -110,7 +109,7 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
             >
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-purple-300">#{i + 1}</span>
-                <span className={`${isWinner ? 'font-bold' : 'font-medium'} text-purple-800`}>
+                <span className={`${isWinner ? 'font-bold' : 'font-medium'} ${player.deleted ? 'italic text-purple-400' : 'text-purple-800'}`}>
                   {player.name}
                 </span>
               </div>
@@ -157,7 +156,9 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
                         : 'bg-white font-medium text-purple-700'
                     }`}
                   >
-                    {player.name}
+                    <span className={player.deleted ? 'italic text-purple-400' : undefined}>
+                      {player.name}
+                    </span>
                   </td>
                   {tableCols.map((col) => {
                     let cellValue: string | number
