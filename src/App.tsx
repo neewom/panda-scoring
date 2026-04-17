@@ -10,6 +10,7 @@ import AddGamePage from './pages/AddGamePage'
 import GameDetailPage from './pages/GameDetailPage'
 import GameSession from './pages/GameSession'
 import GameResults from './pages/GameResults'
+import PlayerDetailPage from './pages/PlayerDetailPage'
 import BottomNav from './components/BottomNav'
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:id" element={<HistoryDetailPage />} />
         <Route path="/players" element={<PlayersPage />} />
+        <Route path="/players/:playerId" element={<PlayerDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/games" element={<GamesPage />} />
         <Route path="/games/new" element={<AddGamePage />} />
