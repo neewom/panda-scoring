@@ -88,6 +88,14 @@ export function finishSession(sessionId: string, playerNames: Record<string, str
   saveSessions(sessions)
 }
 
+export function getSessionCount(): number {
+  return getSessions().length
+}
+
+export function clearSessions(): void {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
 export function resolveSessionPlayers(
   session: GameSession,
   allPlayers: { id: string; name: string; createdAt: string }[]

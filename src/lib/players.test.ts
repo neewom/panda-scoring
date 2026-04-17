@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getPlayers, addPlayer, deletePlayer, renamePlayer } from './players'
+import { getPlayers, addPlayer, deletePlayer, renamePlayer, clearPlayers } from './players'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -69,6 +69,20 @@ describe('players', () => {
       addPlayer('Alice')
       deletePlayer('inexistant')
       expect(getPlayers()).toHaveLength(1)
+    })
+  })
+
+  describe('clearPlayers', () => {
+    it('supprime tous les joueurs du localStorage', () => {
+      addPlayer('Alice')
+      addPlayer('Bob')
+      clearPlayers()
+      expect(getPlayers()).toEqual([])
+    })
+
+    it('clearPlayers sur une liste vide ne génère pas d\'erreur', () => {
+      expect(() => clearPlayers()).not.toThrow()
+      expect(getPlayers()).toEqual([])
     })
   })
 

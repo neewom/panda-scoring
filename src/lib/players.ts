@@ -31,6 +31,10 @@ export function deletePlayer(id: string): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(players))
 }
 
+export function clearPlayers(): void {
+  localStorage.removeItem(STORAGE_KEY)
+}
+
 export function renamePlayer(id: string, newName: string): void {
   const players = getPlayers().map((p) =>
     p.id === id ? { ...p, name: newName.trim() } : p

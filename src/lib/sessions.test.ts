@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createSession, getSessionById } from './sessions'
+import { createSession, getSessionById, getSessionCount, clearSessions } from './sessions'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -46,7 +46,7 @@ describe('sessions', () => {
   })
 })
 
-import { updateScore, finishSession, resolveSessionPlayers } from './sessions'
+import { updateScore, finishSession, resolveSessionPlayers, getFinishedSessions } from './sessions'
 
 describe('updateScore', () => {
   beforeEach(() => {
@@ -98,6 +98,39 @@ describe('finishSession', () => {
     finishSession(session.id, { p1: 'Alice', p2: 'Bob' })
     const saved = getSessionById(session.id)
     expect(saved?.playerNames).toEqual({ p1: 'Alice', p2: 'Bob' })
+  })
+})
+
+describe('clearSessions / getSessionCount', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('getSessionCount retourne 0 si aucune session', () => {
+    expect(getSessionCount()).toBe(0)
+  })
+
+  it('getSessionCount retourne le bon nombre de sessions', () => {
+    createSession('game', ['p1'])
+    createSession('game', ['p2'])
+    expect(getSessionCount()).toBe(2)
+  })
+
+  it('getSessionCount inclut les sessions in_progress et finished', () => {
+    const session = createSession('game', ['p1'])
+    finishSession(session.id, { p1: 'Alice' })
+    createSession('game', ['p2'])
+    expect(getSessionCount()).toBe(2)
+    expect(getFinishedSessions()).toHaveLength(1)
+  })
+
+  it('clearSessions vide le localStorage des sessions', () => {
+    createSession('game', ['p1'])
+    createSession('game', ['p2'])
+    clearSessions()
+    expect(localStorageMock.getItem('panda-sessions')).toBeNull()
+    expect(getSessionCount()).toBe(0)
   })
 })
 
