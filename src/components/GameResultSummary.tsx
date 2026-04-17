@@ -31,7 +31,7 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
         : computePlayerTotal(game, session.scores, p.id),
       scores: computePlayerScores(game, session.scores, p.id),
     }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => game.lowest_wins ? a.total - b.total : b.total - a.total)
 
   const topScore = ranked[0].total
   let winners = ranked.filter((r) => r.total === topScore)
@@ -95,6 +95,11 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
         )}
         {tieBreakLabel && (
           <p className="text-xs text-purple-400">Départagé par : {tieBreakLabel}</p>
+        )}
+        {game.end_condition && (
+          <p className="text-xs text-amber-500">
+            Partie terminée : seuil de {game.end_condition.score_threshold} points atteint
+          </p>
         )}
       </div>
 

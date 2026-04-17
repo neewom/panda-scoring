@@ -195,6 +195,56 @@ describe('buildCustomGame', () => {
   })
 })
 
+describe('buildCustomGame — lowest_wins & end_condition', () => {
+  const BASE = {
+    name: 'Test',
+    playersMin: 2,
+    playersMax: 4,
+    scoringModel: 'per_round' as const,
+    categories: [],
+  }
+
+  it('lowest_wins true est conservé', () => {
+    const game = buildCustomGame({ ...BASE, lowest_wins: true })
+    expect(game.lowest_wins).toBe(true)
+  })
+
+  it('lowest_wins false produit undefined (non stocké)', () => {
+    const game = buildCustomGame({ ...BASE, lowest_wins: false })
+    expect(game.lowest_wins).toBeUndefined()
+  })
+
+  it('lowest_wins absent produit undefined', () => {
+    const game = buildCustomGame({ ...BASE })
+    expect(game.lowest_wins).toBeUndefined()
+  })
+
+  it('end_condition est conservé', () => {
+    const game = buildCustomGame({ ...BASE, end_condition: { score_threshold: 66 } })
+    expect(game.end_condition).toEqual({ score_threshold: 66 })
+  })
+
+  it('end_condition absent produit undefined', () => {
+    const game = buildCustomGame({ ...BASE })
+    expect(game.end_condition).toBeUndefined()
+  })
+})
+
+describe('jeux par défaut — 6 qui prend', () => {
+  it('6 qui prend est dans la bibliothèque', () => {
+    const ids = getGames().map((g) => g.id)
+    expect(ids).toContain('6-qui-prend')
+  })
+
+  it('6 qui prend a lowest_wins et end_condition corrects', () => {
+    const game = getGameById('6-qui-prend')
+    expect(game).toBeDefined()
+    expect(game!.lowest_wins).toBe(true)
+    expect(game!.end_condition).toEqual({ score_threshold: 66 })
+    expect(game!.scoring_model).toBe('per_round')
+  })
+})
+
 describe('computeRoundCount', () => {
   it('retourne null si rounds est undefined', () => {
     const game = buildCustomGame({ name: 'G', playersMin: 2, playersMax: 4, scoringModel: 'end_game', categories: [] })

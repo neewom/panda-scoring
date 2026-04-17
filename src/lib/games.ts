@@ -31,6 +31,8 @@ export interface Game {
   players: { min: number; max: number }
   scoring_model: 'end_game' | 'per_round' | 'hybrid'
   rounds?: number | { perPlayer: number; offset?: number }
+  end_condition?: { score_threshold: number }
+  lowest_wins?: boolean
   scoring: ScoringField[]
   computed: ComputedField[]
   tieBreak?: TieBreakRule[]
@@ -72,6 +74,8 @@ export interface CustomGameInput {
   playersMax: number
   scoringModel: 'end_game' | 'per_round'
   rounds?: number | { perPlayer: number }
+  end_condition?: { score_threshold: number }
+  lowest_wins?: boolean
   categories: { label: string; type: 'number' | 'boolean' }[]
   tiebreakDescription?: string
   scoringNotes?: string
@@ -110,6 +114,8 @@ export function buildCustomGame(input: CustomGameInput): Game {
     players: { min: input.playersMin, max: input.playersMax },
     scoring_model: input.scoringModel,
     rounds: input.rounds,
+    end_condition: input.end_condition,
+    lowest_wins: input.lowest_wins || undefined,
     scoring,
     computed,
     tiebreak_description: input.tiebreakDescription?.trim() || undefined,

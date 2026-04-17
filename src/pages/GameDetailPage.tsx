@@ -63,6 +63,20 @@ export default function GameDetailPage() {
             <span className="text-purple-400">Scoring</span>
             <span className="font-medium text-purple-800">{scoringModelLabel}</span>
           </div>
+          {game.lowest_wins && (
+            <div className="flex justify-between text-sm">
+              <span className="text-purple-400">Victoire</span>
+              <span className="font-medium text-purple-800">Score le plus bas</span>
+            </div>
+          )}
+          {game.end_condition && (
+            <div className="flex justify-between text-sm">
+              <span className="text-purple-400">Fin de partie</span>
+              <span className="font-medium text-purple-800">
+                Premier joueur à {game.end_condition.score_threshold} points
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Catégories de scoring */}

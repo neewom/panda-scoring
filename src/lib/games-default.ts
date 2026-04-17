@@ -71,6 +71,25 @@ export const DEFAULT_GAMES: Game[] = [
     createdAt: '2024-01-01T00:00:00.000Z',
   },
   {
+    id: '6-qui-prend',
+    name: '6 qui prend !',
+    publisher: 'Gigamic',
+    players: { min: 2, max: 10 },
+    scoring_model: 'per_round',
+    lowest_wins: true,
+    end_condition: { score_threshold: 66 },
+    scoring: [
+      { id: 'score', label: 'Score', type: 'number', confident: true },
+    ],
+    computed: [
+      { id: 'total', label: 'Total', formula: 'score', confident: true },
+    ],
+    scoring_notes: "Chaque carte Tête de bœuf récupérée vaut autant de points que de têtes de bœuf imprimées dessus (1, 2, 3, 5 ou 7). Le joueur additionne toutes les têtes de bœuf récupérées pendant la manche. On joue jusqu'à ce qu'un joueur atteigne ou dépasse 66 points ; le joueur avec le moins de points gagne.",
+    tiebreak_description: "En cas d'égalité, victoire partagée.",
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  },
+  {
     id: 'foret-mixte-dartmoor',
     name: 'Forêt Mixte Dartmoor',
     players: { min: 2, max: 5 },

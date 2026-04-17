@@ -63,7 +63,15 @@ export default function GameSession() {
 
   // Total number of rounds (null = undefined/dynamic)
   const totalRounds = computeRoundCount(game, sessionPlayers.length)
-  const isLastRound = totalRounds !== null ? round >= totalRounds : true
+  const hasEndCondition = !isEndGame && !!game.end_condition
+  const endConditionReached = hasEndCondition && sessionPlayers.some(
+    (p) => computePerRoundTotal(game, session.scores, p.id) >= game.end_condition!.score_threshold
+  )
+  const isLastRound = totalRounds !== null
+    ? round >= totalRounds
+    : hasEndCondition
+      ? endConditionReached
+      : true
 
   function getScore(playerId: string, fieldId: string, r?: number): ScoreEntry | undefined {
     return session!.scores.find(
@@ -197,6 +205,11 @@ export default function GameSession() {
               Round {round} / {totalRounds}
             </p>
           )}
+          {endConditionReached && (
+            <p className="text-sm font-semibold text-amber-600">
+              Seuil de {game.end_condition!.score_threshold} points atteint !
+            </p>
+          )}
           <div className="bg-white rounded-2xl border border-purple-100 divide-y divide-purple-50">
             {sessionPlayers.map((p) => {
               const cumulative = Array.from({ length: round }, (_, i) => i + 1).reduce(
@@ -282,6 +295,13 @@ export default function GameSession() {
               />
             </div>
           </div>
+        )}
+
+        {/* End condition badge (per_round without fixed round count) */}
+        {hasEndCondition && totalRounds === null && (
+          <p className="text-xs text-center text-amber-500">
+            Fin de partie à {game.end_condition!.score_threshold} pts
+          </p>
         )}
 
         {/* Player tabs */}

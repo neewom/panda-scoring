@@ -142,8 +142,10 @@ export default function AddGamePage() {
 
   // Scoring model
   const [scoringModel, setScoringModel] = useState<'end_game' | 'per_round'>('end_game')
-  const [roundsType, setRoundsType] = useState<'fixed' | 'perPlayer'>('fixed')
+  const [roundsType, setRoundsType] = useState<'fixed' | 'perPlayer' | 'threshold'>('fixed')
   const [roundsCount, setRoundsCount] = useState('3')
+  const [scoreThreshold, setScoreThreshold] = useState('')
+  const [lowestWins, setLowestWins] = useState(false)
 
   // Categories
   const [categories, setCategories] = useState<CategoryItem[]>([])
@@ -225,6 +227,11 @@ export default function AddGamePage() {
       if (isNaN(rounds) || rounds < 1) newErrors.roundsCount = 'Nombre de manches requis (≥ 1)'
     }
 
+    if (scoringModel === 'per_round' && roundsType === 'threshold') {
+      const threshold = parseInt(scoreThreshold)
+      if (isNaN(threshold) || threshold < 1) newErrors.scoreThreshold = 'Seuil requis (≥ 1)'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -235,8 +242,11 @@ export default function AddGamePage() {
 
     const validCats = categories.filter((c) => c.label.trim())
     let rounds: number | { perPlayer: number } | undefined
+    let endCondition: { score_threshold: number } | undefined
     if (scoringModel === 'per_round') {
-      rounds = roundsType === 'perPlayer' ? { perPlayer: 1 } : parseInt(roundsCount)
+      if (roundsType === 'perPlayer') rounds = { perPlayer: 1 }
+      else if (roundsType === 'fixed') rounds = parseInt(roundsCount)
+      else if (roundsType === 'threshold') endCondition = { score_threshold: parseInt(scoreThreshold) }
     }
 
     const game = buildCustomGame({
@@ -246,6 +256,8 @@ export default function AddGamePage() {
       playersMax: parseInt(playersMax),
       scoringModel,
       rounds,
+      end_condition: endCondition,
+      lowest_wins: lowestWins || undefined,
       categories: validCats.map((c) => ({ label: c.label, type: c.type })),
       tiebreakDescription: tiebreakDesc || undefined,
       scoringNotes: scoringNotes || undefined,
@@ -399,7 +411,16 @@ export default function AddGamePage() {
                     roundsType === 'perPlayer' ? 'bg-purple-100 text-purple-700' : 'text-purple-400 hover:bg-purple-50'
                   }`}
                 >
-                  = Nbre de joueurs
+                  = Nbre joueurs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoundsType('threshold')}
+                  className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                    roundsType === 'threshold' ? 'bg-purple-100 text-purple-700' : 'text-purple-400 hover:bg-purple-50'
+                  }`}
+                >
+                  Seuil score
                 </button>
               </div>
 
@@ -419,8 +440,39 @@ export default function AddGamePage() {
                   {errors.roundsCount && <p className="text-xs text-pink-500">{errors.roundsCount}</p>}
                 </div>
               )}
+
+              {roundsType === 'threshold' && (
+                <div className="space-y-1">
+                  <input
+                    type="number"
+                    value={scoreThreshold}
+                    onChange={(e) => { setScoreThreshold(e.target.value); clearError('scoreThreshold') }}
+                    min={1}
+                    placeholder="ex: 66"
+                    aria-label="Seuil de score"
+                    className={`w-full h-10 rounded-xl border-2 px-3 text-sm bg-white focus:outline-none ${
+                      errors.scoreThreshold ? 'border-pink-400' : 'border-purple-200 focus:border-purple-400'
+                    }`}
+                  />
+                  {errors.scoreThreshold && <p className="text-xs text-pink-500">{errors.scoreThreshold}</p>}
+                </div>
+              )}
             </div>
           )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-purple-700">Score le plus bas gagne</span>
+            <button
+              type="button"
+              onClick={() => setLowestWins((v) => !v)}
+              aria-label="Score le plus bas gagne"
+              className={`relative w-10 h-6 rounded-full transition-colors ${lowestWins ? 'bg-purple-600' : 'bg-purple-200'}`}
+            >
+              <span
+                className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${lowestWins ? 'translate-x-5' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
         </div>
 
         {/* ── Section 3 : Catégories de scoring ── */}
