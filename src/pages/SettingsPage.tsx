@@ -21,7 +21,7 @@ const CONFIRM_CONFIGS: Record<ConfirmAction, ConfirmConfig> = {
   players: {
     title: 'Supprimer tous les joueurs ?',
     description:
-      'Cette action est irréversible. Les joueurs apparaissant dans l'historique resteront visibles.',
+      "Cette action est irréversible. Les joueurs apparaissant dans l'historique resteront visibles.",
     successMessage: 'Tous les joueurs ont été supprimés.',
   },
   customGames: {
