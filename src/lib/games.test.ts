@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getGames, getGameById, addGame, searchGames, type Game } from './games'
+import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, type Game } from './games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -104,5 +104,112 @@ describe('games', () => {
     }
     addGame(custom)
     expect(getGameById('custom-1')?.name).toBe('Custom')
+  })
+})
+
+describe('buildCustomGame', () => {
+  const BASE = {
+    name: 'Test',
+    playersMin: 2,
+    playersMax: 4,
+    scoringModel: 'end_game' as const,
+  }
+
+  it('génère le total comme somme des champs number uniquement', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      categories: [
+        { label: 'Points', type: 'number' },
+        { label: 'Bonus', type: 'number' },
+        { label: 'Majorité', type: 'boolean' },
+      ],
+    })
+    const total = game.computed.find((c) => c.id === 'total')!
+    expect(total.formula).toContain('points')
+    expect(total.formula).toContain('bonus')
+    expect(total.formula).not.toContain('majorite')
+  })
+
+  it('exclut les champs boolean du total', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      categories: [{ label: 'Seul champ', type: 'boolean' }],
+    })
+    expect(game.computed[0].formula).toBe('0')
+  })
+
+  it('formule total = "0" quand aucun champ number', () => {
+    const game = buildCustomGame({ ...BASE, categories: [] })
+    expect(game.computed[0].formula).toBe('0')
+  })
+
+  it('validated est true', () => {
+    const game = buildCustomGame({ ...BASE, categories: [{ label: 'Pts', type: 'number' }] })
+    expect(game.validated).toBe(true)
+  })
+
+  it('scoring_model end_game : rounds est undefined', () => {
+    const game = buildCustomGame({ ...BASE, categories: [] })
+    expect(game.rounds).toBeUndefined()
+  })
+
+  it('per_round avec nombre fixe : rounds est un number', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      scoringModel: 'per_round',
+      rounds: 5,
+      categories: [],
+    })
+    expect(game.rounds).toBe(5)
+    expect(game.scoring_model).toBe('per_round')
+  })
+
+  it('per_round avec perPlayer:1 : rounds est { perPlayer: 1 }', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      scoringModel: 'per_round',
+      rounds: { perPlayer: 1 },
+      categories: [],
+    })
+    expect(game.rounds).toEqual({ perPlayer: 1 })
+  })
+
+  it('déduplique les ids de champs au label identique', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      categories: [
+        { label: 'Points', type: 'number' },
+        { label: 'Points', type: 'number' },
+      ],
+    })
+    const ids = game.scoring.map((f) => f.id)
+    expect(new Set(ids).size).toBe(2)
+  })
+
+  it('slug vide fallback sur field_N', () => {
+    const game = buildCustomGame({
+      ...BASE,
+      categories: [{ label: '!!!', type: 'number' }],
+    })
+    expect(game.scoring[0].id).toMatch(/^field_/)
+  })
+})
+
+describe('computeRoundCount', () => {
+  it('retourne null si rounds est undefined', () => {
+    const game = buildCustomGame({ name: 'G', playersMin: 2, playersMax: 4, scoringModel: 'end_game', categories: [] })
+    expect(computeRoundCount(game, 3)).toBeNull()
+  })
+
+  it('retourne le nombre fixe si rounds est un number', () => {
+    const game = buildCustomGame({ name: 'G', playersMin: 2, playersMax: 4, scoringModel: 'per_round', rounds: 5, categories: [] })
+    expect(computeRoundCount(game, 3)).toBe(5)
+    expect(computeRoundCount(game, 4)).toBe(5)
+  })
+
+  it('retourne playerCount × perPlayer quand rounds = { perPlayer: 1 }', () => {
+    const game = buildCustomGame({ name: 'G', playersMin: 2, playersMax: 4, scoringModel: 'per_round', rounds: { perPlayer: 1 }, categories: [] })
+    expect(computeRoundCount(game, 3)).toBe(3)
+    expect(computeRoundCount(game, 4)).toBe(4)
   })
 })
