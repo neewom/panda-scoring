@@ -1,15 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getPlayers, addPlayer, deletePlayer, renamePlayer, type Player } from '@/lib/players'
+import { getGames } from '@/lib/games'
+import { getFinishedSessions } from '@/lib/sessions'
+import { computePlayerSummaryStats } from '@/lib/player-stats'
 
 export default function PlayersPage() {
+  const navigate = useNavigate()
   const [players, setPlayers] = useState<Player[]>(() => getPlayers())
   const [name, setName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editError, setEditError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Computed once per render — these don't change while the page is open
+  const sessions = getFinishedSessions()
+  const games = new Map(getGames().map((g) => [g.id, g]))
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -95,65 +104,81 @@ export default function PlayersPage() {
           <p className="text-center text-purple-300 text-sm">Aucun joueur pour l'instant.</p>
         ) : (
           <ul className="space-y-2" aria-label="Liste des joueurs">
-            {players.map((player) => (
-              <li
-                key={player.id}
-                className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100"
-              >
-                {editingId === player.id ? (
-                  <div className="flex flex-1 items-center gap-2 min-w-0">
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <input
-                        ref={inputRef}
-                        type="text"
-                        value={editName}
-                        onChange={(e) => { setEditName(e.target.value); setEditError('') }}
-                        onKeyDown={handleEditKeyDown}
-                        aria-label={`Renommer ${player.name}`}
-                        className="h-8 rounded-lg border-2 border-purple-300 px-2 text-sm focus:outline-none focus:border-purple-500 bg-white"
-                      />
-                      {editError && (
-                        <p className="text-xs text-pink-500 mt-1">{editError}</p>
-                      )}
-                    </div>
-                    <button
-                      onClick={handleSave}
-                      aria-label="Valider le renommage"
-                      className="text-purple-500 hover:text-purple-700 transition-colors shrink-0"
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      aria-label="Annuler le renommage"
-                      className="text-purple-300 hover:text-purple-500 transition-colors shrink-0"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="font-medium text-purple-800">{player.name}</span>
-                    <div className="flex items-center gap-3">
+            {players.map((player) => {
+              const stats = computePlayerSummaryStats(player.id, sessions, games)
+              return (
+                <li
+                  key={player.id}
+                  className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100"
+                >
+                  {editingId === player.id ? (
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          value={editName}
+                          onChange={(e) => { setEditName(e.target.value); setEditError('') }}
+                          onKeyDown={handleEditKeyDown}
+                          aria-label={`Renommer ${player.name}`}
+                          className="h-8 rounded-lg border-2 border-purple-300 px-2 text-sm focus:outline-none focus:border-purple-500 bg-white"
+                        />
+                        {editError && (
+                          <p className="text-xs text-pink-500 mt-1">{editError}</p>
+                        )}
+                      </div>
                       <button
-                        onClick={() => handleStartEdit(player)}
-                        aria-label={`Renommer ${player.name}`}
-                        className="text-purple-300 hover:text-purple-500 transition-colors"
+                        onClick={handleSave}
+                        aria-label="Valider le renommage"
+                        className="text-purple-500 hover:text-purple-700 transition-colors shrink-0"
                       >
-                        <Pencil size={15} />
+                        <Check size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(player.id)}
-                        aria-label={`Supprimer ${player.name}`}
-                        className="text-pink-400 hover:text-pink-600 text-sm font-semibold transition-colors"
+                        onClick={handleCancel}
+                        aria-label="Annuler le renommage"
+                        className="text-purple-300 hover:text-purple-500 transition-colors shrink-0"
                       >
-                        Supprimer
+                        <X size={16} />
                       </button>
                     </div>
-                  </>
-                )}
-              </li>
-            ))}
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => navigate(`/players/${player.id}`)}
+                        aria-label={`Voir les statistiques de ${player.name}`}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <p className="font-medium text-purple-800">{player.name}</p>
+                        {stats.gamesPlayed > 0 ? (
+                          <p className="text-xs text-purple-400">
+                            {stats.gamesPlayed} {stats.gamesPlayed === 1 ? 'partie' : 'parties'} · {stats.wins} {stats.wins === 1 ? 'victoire' : 'victoires'} · {stats.winRate}%
+                          </p>
+                        ) : (
+                          <p className="text-xs text-purple-300">Aucune partie jouée</p>
+                        )}
+                      </button>
+                      <div className="flex items-center gap-3 shrink-0 ml-2">
+                        <button
+                          onClick={() => handleStartEdit(player)}
+                          aria-label={`Renommer ${player.name}`}
+                          className="text-purple-300 hover:text-purple-500 transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(player.id)}
+                          aria-label={`Supprimer ${player.name}`}
+                          className="text-pink-400 hover:text-pink-600 text-sm font-semibold transition-colors"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>
