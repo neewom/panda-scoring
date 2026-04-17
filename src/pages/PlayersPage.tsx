@@ -1,10 +1,22 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { Pencil, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { getPlayers, addPlayer, deletePlayer, type Player } from '@/lib/players'
+import { getPlayers, addPlayer, deletePlayer, renamePlayer, type Player } from '@/lib/players'
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>(() => getPlayers())
   const [name, setName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editError, setEditError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editingId])
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -18,6 +30,36 @@ export default function PlayersPage() {
   function handleDelete(id: string) {
     deletePlayer(id)
     setPlayers(getPlayers())
+  }
+
+  function handleStartEdit(player: Player) {
+    setEditingId(player.id)
+    setEditName(player.name)
+    setEditError('')
+  }
+
+  function handleSave() {
+    const trimmed = editName.trim()
+    if (!trimmed) return
+    const duplicate = players.find((p) => p.id !== editingId && p.name === trimmed)
+    if (duplicate) {
+      setEditError('Ce nom existe déjà')
+      return
+    }
+    renamePlayer(editingId!, trimmed)
+    setPlayers(getPlayers())
+    setEditingId(null)
+    setEditError('')
+  }
+
+  function handleCancel() {
+    setEditingId(null)
+    setEditError('')
+  }
+
+  function handleEditKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') handleSave()
+    if (e.key === 'Escape') handleCancel()
   }
 
   return (
@@ -58,14 +100,58 @@ export default function PlayersPage() {
                 key={player.id}
                 className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-purple-100"
               >
-                <span className="font-medium text-purple-800">{player.name}</span>
-                <button
-                  onClick={() => handleDelete(player.id)}
-                  aria-label={`Supprimer ${player.name}`}
-                  className="text-pink-400 hover:text-pink-600 text-sm font-semibold transition-colors"
-                >
-                  Supprimer
-                </button>
+                {editingId === player.id ? (
+                  <div className="flex flex-1 items-center gap-2 min-w-0">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={editName}
+                        onChange={(e) => { setEditName(e.target.value); setEditError('') }}
+                        onKeyDown={handleEditKeyDown}
+                        aria-label={`Renommer ${player.name}`}
+                        className="h-8 rounded-lg border-2 border-purple-300 px-2 text-sm focus:outline-none focus:border-purple-500 bg-white"
+                      />
+                      {editError && (
+                        <p className="text-xs text-pink-500 mt-1">{editError}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSave}
+                      aria-label="Valider le renommage"
+                      className="text-purple-500 hover:text-purple-700 transition-colors shrink-0"
+                    >
+                      <Check size={16} />
+                    </button>
+                    <button
+                      onClick={handleCancel}
+                      aria-label="Annuler le renommage"
+                      className="text-purple-300 hover:text-purple-500 transition-colors shrink-0"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="font-medium text-purple-800">{player.name}</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleStartEdit(player)}
+                        aria-label={`Renommer ${player.name}`}
+                        className="text-purple-300 hover:text-purple-500 transition-colors"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(player.id)}
+                        aria-label={`Supprimer ${player.name}`}
+                        className="text-pink-400 hover:text-pink-600 text-sm font-semibold transition-colors"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

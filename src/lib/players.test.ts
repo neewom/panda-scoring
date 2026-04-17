@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getPlayers, addPlayer, deletePlayer } from './players'
+import { getPlayers, addPlayer, deletePlayer, renamePlayer } from './players'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -69,6 +69,46 @@ describe('players', () => {
       addPlayer('Alice')
       deletePlayer('inexistant')
       expect(getPlayers()).toHaveLength(1)
+    })
+  })
+
+  describe('renamePlayer', () => {
+    it('met à jour le nom en localStorage', () => {
+      addPlayer('Alice')
+      const [alice] = getPlayers()
+      renamePlayer(alice.id, 'Alicia')
+      expect(getPlayers()[0].name).toBe('Alicia')
+    })
+
+    it('trimme les espaces en début et fin', () => {
+      addPlayer('Alice')
+      const [alice] = getPlayers()
+      renamePlayer(alice.id, '  Alicia  ')
+      expect(getPlayers()[0].name).toBe('Alicia')
+    })
+
+    it('ne modifie pas les autres joueurs', () => {
+      addPlayer('Alice')
+      addPlayer('Bob')
+      const [alice] = getPlayers()
+      renamePlayer(alice.id, 'Alicia')
+      const updated = getPlayers()
+      expect(updated.find((p) => p.id !== alice.id)?.name).toBe('Bob')
+    })
+
+    it('conserve l\'id et createdAt du joueur renommé', () => {
+      addPlayer('Alice')
+      const [before] = getPlayers()
+      renamePlayer(before.id, 'Alicia')
+      const [after] = getPlayers()
+      expect(after.id).toBe(before.id)
+      expect(after.createdAt).toBe(before.createdAt)
+    })
+
+    it('ne fait rien si l\'id n\'existe pas', () => {
+      addPlayer('Alice')
+      renamePlayer('inexistant', 'Ghost')
+      expect(getPlayers()[0].name).toBe('Alice')
     })
   })
 })
