@@ -65,6 +65,60 @@ export function addGame(game: Game): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
 }
 
+export interface CustomGameInput {
+  name: string
+  publisher?: string
+  playersMin: number
+  playersMax: number
+  scoringModel: 'end_game' | 'per_round'
+  rounds?: number | { perPlayer: number }
+  categories: { label: string; type: 'number' | 'boolean' }[]
+  tiebreakDescription?: string
+  scoringNotes?: string
+}
+
+function slugifyLabel(label: string, index: number): string {
+  const base = label
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '')
+  return base || `field_${index}`
+}
+
+export function buildCustomGame(input: CustomGameInput): Game {
+  const usedIds = new Set<string>()
+  const scoring: ScoringField[] = input.categories.map((cat, i) => {
+    let id = slugifyLabel(cat.label, i)
+    let unique = id
+    let counter = 2
+    while (usedIds.has(unique)) unique = `${id}_${counter++}`
+    usedIds.add(unique)
+    return { id: unique, label: cat.label, type: cat.type, confident: true }
+  })
+
+  const numberIds = scoring.filter((f) => f.type === 'number').map((f) => f.id)
+  const totalFormula = numberIds.length > 0 ? numberIds.join(' + ') : '0'
+  const computed: ComputedField[] = [{ id: 'total', formula: totalFormula, confident: true }]
+
+  return {
+    id: crypto.randomUUID(),
+    name: input.name.trim(),
+    publisher: input.publisher?.trim() || undefined,
+    players: { min: input.playersMin, max: input.playersMax },
+    scoring_model: input.scoringModel,
+    rounds: input.rounds,
+    scoring,
+    computed,
+    tiebreak_description: input.tiebreakDescription?.trim() || undefined,
+    scoring_notes: input.scoringNotes?.trim() || undefined,
+    validated: true,
+    createdAt: new Date().toISOString(),
+  }
+}
+
 export function searchGames(query: string): Game[] {
   const q = query.trim().toLowerCase()
   if (!q) return getGames()

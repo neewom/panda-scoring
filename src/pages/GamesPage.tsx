@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { getGames, searchGames } from '@/lib/games'
 
 export default function GamesPage() {
@@ -14,6 +15,14 @@ export default function GamesPage() {
           <div className="text-5xl">🎲</div>
           <h1 className="text-3xl font-bold text-purple-700">Jeux</h1>
         </div>
+
+        <Button
+          onClick={() => navigate('/games/new')}
+          aria-label="Ajouter un jeu"
+          className="w-full h-10 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl"
+        >
+          + Ajouter un jeu
+        </Button>
 
         <input
           type="search"
