@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { getFinishedSessions, resolveSessionPlayers } from '@/lib/sessions'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
-import { computePlayerTotal } from '@/lib/scoring'
+import { computePlayerTotal, computePerRoundTotal } from '@/lib/scoring'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -60,9 +60,11 @@ export default function HistoryPage() {
             const ranked = sessionPlayers
               .map((p) => ({
                 player: p,
-                total: computePlayerTotal(game, session.scores, p.id),
+                total: game.scoring_model === 'per_round'
+                  ? computePerRoundTotal(game, session.scores, p.id)
+                  : computePlayerTotal(game, session.scores, p.id),
               }))
-              .sort((a, b) => b.total - a.total)
+              .sort((a, b) => game.lowest_wins ? a.total - b.total : b.total - a.total)
 
             const topScore = ranked[0]?.total ?? 0
             const winners = ranked.filter((r) => r.total === topScore)
