@@ -37,8 +37,12 @@ Application de scoring pour jeux de société.
 - `docs:` documentation
 
 ## Tests
-- Toujours écrire les tests avec Vitest
+- Écrire des tests Vitest uniquement pour la logique métier pure dans `src/lib/` (scoring engine, game logic, utils)
+- Ne pas écrire de tests pour les composants React, les pages, ou l'UI
 - Ne jamais modifier un test existant sans raison explicite
+- Ne jamais lancer la suite de tests complète (`vitest run`). Lancer uniquement le(s) fichier(s) test concerné(s) par la modification : `vitest run src/lib/chemin/du/fichier.test.ts`
+- Utiliser `--reporter=dot` pour minimiser la sortie console
+- Ne lancer `vitest run` global que si je le demande explicitement
 
 ## Identité Git
 Avant tout commit, configure toujours ton identité Git :
