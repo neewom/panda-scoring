@@ -179,8 +179,14 @@ export default function GameSession() {
 
   function handleFinish() {
     const playerNamesMap: Record<string, string> = {}
-    sessionPlayers.forEach((p) => { playerNamesMap[p.id] = p.name })
-    finishSession(session!.id, playerNamesMap)
+    const playerTotalsMap: Record<string, number> = {}
+    sessionPlayers.forEach((p) => {
+      playerNamesMap[p.id] = p.name
+      playerTotalsMap[p.id] = isEndGame
+        ? computePlayerTotal(game!, session!.scores, p.id)
+        : computePerRoundTotal(game!, session!.scores, p.id)
+    })
+    finishSession(session!.id, playerNamesMap, playerTotalsMap)
     navigate(`/game/${session!.id}/results`)
   }
 

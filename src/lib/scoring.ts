@@ -1,18 +1,48 @@
 import type { Game } from './games'
-import type { ScoreEntry } from './sessions'
+import type { GameSession, ScoreEntry } from './sessions'
 
+/**
+ * Evaluates a formula string with the given variable values.
+ *
+ * Handles both valid JS identifiers (passed as function parameters) and
+ * invalid identifiers like digit-starting IDs (substituted inline by value
+ * before evaluation). This ensures old custom games with digit-based field
+ * IDs (e.g. "1", "2") still compute correctly.
+ */
 function evalFormula(formula: string, values: Record<string, number | boolean>): number {
   try {
     // Transpile bare math functions to Math.* (e.g. floor( → Math.floor()
-    const processed = formula.replace(
+    let processed = formula.replace(
       /\b(floor|ceil|round|abs|min|max|sqrt|pow)\b(?=\s*\()/g,
       'Math.$1'
     )
-    const keys = Object.keys(values)
-    const vals = Object.values(values)
+
+    const identifierKeys: string[] = []
+    const identifierVals: (number | boolean)[] = []
+
+    // Separate valid JS identifiers from invalid ones.
+    // Process invalid keys inline (longest first to avoid partial matches).
+    const invalidKeys = Object.keys(values)
+      .filter((k) => !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k))
+      .sort((a, b) => b.length - a.length)
+
+    for (const key of invalidKeys) {
+      const numVal = typeof values[key] === 'boolean' ? (values[key] ? 1 : 0) : Number(values[key])
+      // Word-boundary replacement: "\b1\b" matches standalone "1" but not "1" inside "10".
+      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      processed = processed.replace(new RegExp(`\\b${escaped}\\b`, 'g'), String(numVal))
+    }
+
+    for (const [key, val] of Object.entries(values)) {
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)) {
+        identifierKeys.push(key)
+        identifierVals.push(val)
+      }
+    }
+
     // eslint-disable-next-line no-new-func
-    const fn = new Function('Math', ...keys, `return (${processed})`)
-    const result = fn(Math, ...vals)
+    const fn = new Function('Math', ...identifierKeys, `return (${processed})`)
+    const result = fn(Math, ...identifierVals)
     if (typeof result === 'boolean') return result ? 1 : 0
     const num = Number(result)
     return isNaN(num) ? 0 : num
@@ -80,4 +110,26 @@ export function computePlayerTotal(
   const values = computePlayerScores(game, scores, playerId, round)
   const total = values['total']
   return typeof total === 'number' ? total : 0
+}
+
+/**
+ * Resolves the display total for a player in a session.
+ *
+ * - If the game config is available: recalculates dynamically from stored
+ *   category scores (fixes sessions that were saved with total = 0 due to
+ *   a prior formula evaluation bug).
+ * - If the game config has been deleted: falls back to the total cached in
+ *   session.playerTotals at finish time.
+ */
+export function resolvePlayerTotal(
+  session: GameSession,
+  game: Game | undefined,
+  playerId: string
+): number {
+  if (game) {
+    return game.scoring_model === 'per_round'
+      ? computePerRoundTotal(game, session.scores, playerId)
+      : computePlayerTotal(game, session.scores, playerId)
+  }
+  return session.playerTotals?.[playerId] ?? 0
 }

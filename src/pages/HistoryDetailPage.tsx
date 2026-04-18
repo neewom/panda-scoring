@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
+import { resolvePlayerTotal } from '@/lib/scoring'
 import GameResultSummary from '@/components/GameResultSummary'
 
 export default function HistoryDetailPage() {
@@ -14,7 +15,7 @@ export default function HistoryDetailPage() {
   const allPlayers = getPlayers()
   const sessionPlayers = session ? resolveSessionPlayers(session, allPlayers) : []
 
-  if (!session || !game || sessionPlayers.length === 0) {
+  if (!session || sessionPlayers.length === 0) {
     return <Navigate to="/history" replace />
   }
 
@@ -25,10 +26,32 @@ export default function HistoryDetailPage() {
         {/* Header */}
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold text-purple-700">Partie terminée 🎉</h1>
-          <p className="text-sm font-medium text-purple-400">{game.name}</p>
+          <p className={`text-sm font-medium ${game ? 'text-purple-400' : 'italic text-purple-300'}`}>
+            {game?.name ?? 'Jeu supprimé'}
+          </p>
         </div>
 
-        <GameResultSummary game={game} session={session} sessionPlayers={sessionPlayers} />
+        {game ? (
+          <GameResultSummary game={game} session={session} sessionPlayers={sessionPlayers} />
+        ) : (
+          /* Fallback: game config deleted — show ranking from stored totals */
+          <div className="bg-white rounded-2xl border border-purple-100 divide-y divide-purple-50">
+            {sessionPlayers
+              .map((p) => ({ player: p, total: resolvePlayerTotal(session, undefined, p.id) }))
+              .sort((a, b) => b.total - a.total)
+              .map(({ player, total }, i) => (
+                <div key={player.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-purple-300">#{i + 1}</span>
+                    <span className={`font-medium ${player.deleted ? 'italic text-purple-400' : 'text-purple-800'}`}>
+                      {player.name}
+                    </span>
+                  </div>
+                  <span className="font-bold text-purple-600">{total} pts</span>
+                </div>
+              ))}
+          </div>
+        )}
 
         {/* Actions */}
         <Button

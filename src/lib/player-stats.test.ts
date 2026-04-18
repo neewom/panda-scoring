@@ -218,3 +218,52 @@ describe('computePlayerDetailStats', () => {
     })
   })
 })
+
+// ── Recalcul dynamique : classement et fallback jeu supprimé ─────────────────
+
+describe('recalcul dynamique dans les stats joueur', () => {
+  it('le classement et le vainqueur sont basés sur le total recalculé', () => {
+    // Jeu avec formule simple mais scores corrects
+    const s = makeSession('1', ['p1', 'p2', 'p3'], [
+      { pid: 'p1', pts: 20 },
+      { pid: 'p2', pts: 30 },
+      { pid: 'p3', pts: 10 },
+    ])
+    const statsP1 = computePlayerDetailStats('p1', [s], GAMES)
+    const statsP2 = computePlayerDetailStats('p2', [s], GAMES)
+    // p2 wins (30 pts), p1 is 2nd → podium, p3 is 3rd → podium
+    expect(statsP2.wins).toBe(1)
+    expect(statsP1.podiums).toBe(1)
+    expect(statsP1.recentSessions[0].position).toBe(2)
+  })
+
+  it('sessions de jeux supprimés comptent dans gamesPlayed avec fallback sur playerTotals', () => {
+    // Session d'un jeu qui n'est plus dans la map
+    const sessionDeletedGame: GameSession = {
+      id: 'del1',
+      gameId: 'deleted-game',
+      players: ['p1', 'p2'],
+      createdAt: '2024-06-01T00:00:00.000Z',
+      status: 'finished',
+      scores: [],
+      playerTotals: { p1: 25, p2: 10 },
+    }
+    const sessionNormal = makeSession('2', ['p1', 'p2'], [
+      { pid: 'p1', pts: 15 },
+      { pid: 'p2', pts: 5 },
+    ])
+
+    // GAMES ne contient pas 'deleted-game'
+    const stats = computePlayerDetailStats('p1', [sessionDeletedGame, sessionNormal], GAMES)
+
+    // Les 2 parties comptent
+    expect(stats.gamesPlayed).toBe(2)
+    // p1 gagne les deux (25 > 10 pour la supprimée, 15 > 5 pour la normale)
+    expect(stats.wins).toBe(2)
+    // La partie supprimée apparaît en recentSessions avec gameName "Jeu supprimé"
+    const deletedEntry = stats.recentSessions.find((s) => s.sessionId === 'del1')
+    expect(deletedEntry).toBeDefined()
+    expect(deletedEntry?.gameName).toBe('Jeu supprimé')
+    expect(deletedEntry?.score).toBe(25)
+  })
+})

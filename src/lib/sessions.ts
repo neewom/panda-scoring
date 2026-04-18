@@ -11,6 +11,8 @@ export interface GameSession {
   gameId: string
   players: string[]
   playerNames?: Record<string, string>
+  /** Totals cached at finish time. Used as fallback when game config is no longer available. */
+  playerTotals?: Record<string, number>
   createdAt: string
   status: 'in_progress' | 'finished'
   scores: ScoreEntry[]
@@ -80,11 +82,20 @@ export function updateScore(sessionId: string, entry: ScoreEntry): void {
   saveSessions(sessions)
 }
 
-export function finishSession(sessionId: string, playerNames: Record<string, string>): void {
+export function finishSession(
+  sessionId: string,
+  playerNames: Record<string, string>,
+  playerTotals?: Record<string, number>
+): void {
   const sessions = getSessions()
   const idx = sessions.findIndex((s) => s.id === sessionId)
   if (idx === -1) return
-  sessions[idx] = { ...sessions[idx], status: 'finished', playerNames }
+  sessions[idx] = {
+    ...sessions[idx],
+    status: 'finished',
+    playerNames,
+    ...(playerTotals !== undefined && { playerTotals }),
+  }
   saveSessions(sessions)
 }
 

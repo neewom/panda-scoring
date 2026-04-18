@@ -1,4 +1,4 @@
-import { computePlayerTotal, computePerRoundTotal } from './scoring'
+import { resolvePlayerTotal } from './scoring'
 import type { Game } from './games'
 import type { GameSession } from './sessions'
 
@@ -35,23 +35,23 @@ export interface PlayerDetailStats {
   recentSessions: RecentSession[]
 }
 
-function getPlayerTotal(game: Game, session: GameSession, playerId: string): number {
-  return game.scoring_model === 'per_round'
-    ? computePerRoundTotal(game, session.scores, playerId)
-    : computePlayerTotal(game, session.scores, playerId)
-}
-
 /**
  * Returns the dense rank of a player in a finished session (1 = winner).
  * Equal scores share the same rank. Respects lowest_wins direction.
+ * When game config is unavailable, falls back to stored totals and assumes highest_wins.
  */
-function getPlayerRank(game: Game, session: GameSession, playerId: string): number {
+function getPlayerRank(
+  game: Game | undefined,
+  session: GameSession,
+  playerId: string
+): number {
   const scored = session.players.map((pid) => ({
     playerId: pid,
-    total: getPlayerTotal(game, session, pid),
+    total: resolvePlayerTotal(session, game, pid),
   }))
 
-  scored.sort((a, b) => game.lowest_wins ? a.total - b.total : b.total - a.total)
+  const lowestWins = game?.lowest_wins ?? false
+  scored.sort((a, b) => lowestWins ? a.total - b.total : b.total - a.total)
 
   // Build unique sorted score list → dense rank = index + 1
   const unique: number[] = []
@@ -77,7 +77,6 @@ export function computePlayerSummaryStats(
   let wins = 0
   for (const session of finished) {
     const game = games.get(session.gameId)
-    if (!game) continue
     if (getPlayerRank(game, session, playerId) === 1) wins++
   }
 
@@ -103,24 +102,26 @@ export function computePlayerDetailStats(
 
   for (const session of finished) {
     const game = games.get(session.gameId)
-    if (!game) continue
 
-    const score = getPlayerTotal(game, session, playerId)
+    const score = resolvePlayerTotal(session, game, playerId)
     const rank = getPlayerRank(game, session, playerId)
 
     if (rank === 1) wins++
     if (rank === 2 || rank === 3) podiums++
 
-    if (!byGameMap.has(session.gameId)) {
-      byGameMap.set(session.gameId, { game, entries: [] })
+    // Per-game breakdown only when game config is available (need name, direction)
+    if (game) {
+      if (!byGameMap.has(session.gameId)) {
+        byGameMap.set(session.gameId, { game, entries: [] })
+      }
+      byGameMap.get(session.gameId)!.entries.push({ score, win: rank === 1 })
     }
-    byGameMap.get(session.gameId)!.entries.push({ score, win: rank === 1 })
 
     if (recentSessions.length < 5) {
       recentSessions.push({
         sessionId: session.id,
         gameId: session.gameId,
-        gameName: game.name,
+        gameName: game?.name ?? 'Jeu supprimé',
         createdAt: session.createdAt,
         score,
         position: rank,
