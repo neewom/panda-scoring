@@ -11,7 +11,6 @@ import GameDetailPage from './pages/GameDetailPage'
 import GameSession from './pages/GameSession'
 import GameResults from './pages/GameResults'
 import PlayerDetailPage from './pages/PlayerDetailPage'
-import BottomNav from './components/BottomNav'
 
 function App() {
   return (
@@ -30,7 +29,6 @@ function App() {
         <Route path="/game/:id" element={<GameSession />} />
         <Route path="/game/:id/results" element={<GameResults />} />
       </Routes>
-      <BottomNav />
     </BrowserRouter>
   )
 }

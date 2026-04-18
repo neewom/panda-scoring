@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { GripVertical, X } from 'lucide-react'
 import { getGames, addGame, buildCustomGame } from '@/lib/games'
+import PageHeader from '@/components/PageHeader'
 
 /* ─────────────────────────────────────────
    Types
@@ -273,22 +274,12 @@ export default function AddGamePage() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50"
+      className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50"
     >
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={() => navigate('/games')}
-            aria-label="Retour à la bibliothèque"
-            className="text-sm text-purple-400 hover:text-purple-600 transition-colors"
-          >
-            ← Retour
-          </button>
-          <h1 className="text-2xl font-bold text-purple-700">Nouveau jeu</h1>
-        </div>
+        <PageHeader title="Nouveau jeu" />
 
         {/* ── Section 1 : Informations générales ── */}
         <div className="space-y-4">

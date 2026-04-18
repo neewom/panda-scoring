@@ -5,6 +5,7 @@ import { getPlayers } from '@/lib/players'
 import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
 import { resolvePlayerTotal } from '@/lib/scoring'
 import GameResultSummary from '@/components/GameResultSummary'
+import PageHeader from '@/components/PageHeader'
 
 export default function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -20,16 +21,14 @@ export default function HistoryDetailPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-2xl space-y-8">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-purple-700">Partie terminée 🎉</h1>
-          <p className={`text-sm font-medium ${game ? 'text-purple-400' : 'italic text-purple-300'}`}>
-            {game?.name ?? 'Jeu supprimé'}
-          </p>
-        </div>
+        <PageHeader title="Partie terminée 🎉" />
+        <p className={`-mt-4 text-sm font-medium text-center ${game ? 'text-purple-400' : 'italic text-purple-300'}`}>
+          {game?.name ?? 'Jeu supprimé'}
+        </p>
 
         {game ? (
           <GameResultSummary game={game} session={session} sessionPlayers={sessionPlayers} />
@@ -60,7 +59,7 @@ export default function HistoryDetailPage() {
           aria-label="Retour à l'historique"
           className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
         >
-          ← Retour à l'historique
+          📜 Retour à l'historique
         </Button>
 
       </div>

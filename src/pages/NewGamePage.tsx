@@ -24,6 +24,7 @@ import { getPlayers, addPlayer } from '@/lib/players'
 import { createSession } from '@/lib/sessions'
 import type { Game } from '@/lib/games'
 import type { Player } from '@/lib/players'
+import PageHeader from '@/components/PageHeader'
 
 type Step = 1 | 2 | 3
 
@@ -136,23 +137,20 @@ export default function NewGamePage() {
     .filter((p): p is Player => p !== undefined)
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header + stepper */}
-        <div className="text-center space-y-2">
-          <div className="text-5xl">🎮</div>
-          <h1 className="text-3xl font-bold text-purple-700">Nouvelle partie</h1>
-          <div className="flex items-center justify-center gap-2 pt-1">
-            {([1, 2, 3] as Step[]).map((s) => (
-              <div
-                key={s}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  s === step ? 'bg-purple-600' : s < step ? 'bg-purple-300' : 'bg-purple-100'
-                }`}
-              />
-            ))}
-          </div>
+        <PageHeader title="Nouvelle partie" />
+        <div className="flex items-center justify-center gap-2 -mt-4">
+          {([1, 2, 3] as Step[]).map((s) => (
+            <div
+              key={s}
+              className={`h-2 w-2 rounded-full transition-colors ${
+                s === step ? 'bg-purple-600' : s < step ? 'bg-purple-300' : 'bg-purple-100'
+              }`}
+            />
+          ))}
         </div>
 
         {/* Étape 1 — Choisir un jeu */}

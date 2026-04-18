@@ -19,7 +19,7 @@ export default function GameResults() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-2xl space-y-8">
 
         {/* Header */}
@@ -41,11 +41,11 @@ export default function GameResults() {
           </Button>
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
-            aria-label="Retour accueil"
+            onClick={() => navigate('/history')}
+            aria-label="Retour à l'historique"
             className="w-full h-12 font-semibold text-purple-500 hover:bg-purple-50 rounded-2xl"
           >
-            🏠 Retour accueil
+            📜 Retour à l'historique
           </Button>
         </div>
 

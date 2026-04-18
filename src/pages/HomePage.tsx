@@ -1,16 +1,8 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const [currentGame] = useState(() => {
-    try {
-      return localStorage.getItem('panda-current-game')
-    } catch {
-      return null
-    }
-  })
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-8 px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
@@ -22,8 +14,8 @@ export default function HomePage() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-        {/* Nouvelle partie — CTA principal */}
+      <div className="flex flex-col gap-4 w-full">
+        {/* 1. Nouvelle partie — CTA principal */}
         <Button
           onClick={() => navigate('/new-game')}
           className="w-full h-14 text-lg font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200 rounded-2xl"
@@ -32,18 +24,7 @@ export default function HomePage() {
           🎲 Nouvelle partie
         </Button>
 
-        {/* Reprendre — uniquement si partie en cours */}
-        {currentGame && (
-          <Button
-            variant="outline"
-            className="w-full h-12 text-base font-semibold border-2 border-green-400 text-green-700 hover:bg-green-50 rounded-2xl"
-            aria-label="Reprendre la partie en cours"
-          >
-            ▶️ Reprendre la partie
-          </Button>
-        )}
-
-        {/* Historique */}
+        {/* 2. Historique */}
         <Button
           variant="ghost"
           onClick={() => navigate('/history')}
@@ -53,7 +34,7 @@ export default function HomePage() {
           📜 Historique des parties
         </Button>
 
-        {/* Joueurs */}
+        {/* 3. Joueurs */}
         <Button
           variant="ghost"
           onClick={() => navigate('/players')}
@@ -63,18 +44,26 @@ export default function HomePage() {
           👥 Joueurs
         </Button>
 
-        {/* Jeux */}
+        {/* 4. Bibliothèque de jeux */}
         <Button
           variant="ghost"
           onClick={() => navigate('/games')}
           className="w-full h-12 text-base font-semibold text-purple-500 hover:bg-purple-50 rounded-2xl"
           aria-label="Voir la bibliothèque de jeux"
         >
-          🎲 Bibliothèque de jeux
+          🎮 Bibliothèque de jeux
+        </Button>
+
+        {/* 5. Paramètres — style tertiaire */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/settings')}
+          className="w-full h-10 text-sm font-medium text-purple-300 hover:text-purple-500 hover:bg-purple-50 rounded-2xl"
+          aria-label="Paramètres"
+        >
+          ⚙️ Paramètres
         </Button>
       </div>
-
-
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { getFinishedSessions, resolveSessionPlayers } from '@/lib/sessions'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import { resolvePlayerTotal } from '@/lib/scoring'
+import PageHeader from '@/components/PageHeader'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -28,27 +29,29 @@ export default function HistoryPage() {
 
   if (sessions.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-4 pb-20 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
-        <div className="text-5xl">📜</div>
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-purple-700">Historique</h1>
-          <p className="text-purple-400">Aucune partie jouée pour le moment.</p>
+      <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+        <div className="w-full max-w-sm">
+          <PageHeader title="Historique" />
+          <div className="flex flex-col items-center gap-6 mt-8">
+            <div className="text-5xl">📜</div>
+            <p className="text-purple-400">Aucune partie jouée pour le moment.</p>
+            <Button
+              onClick={() => navigate('/new-game')}
+              aria-label="Créer une nouvelle partie"
+              className="h-12 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
+            >
+              🎲 Nouvelle partie
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={() => navigate('/new-game')}
-          aria-label="Créer une nouvelle partie"
-          className="h-12 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
-        >
-          🎲 Nouvelle partie
-        </Button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
-        <h1 className="text-2xl font-bold text-purple-700">📜 Historique</h1>
+        <PageHeader title="Historique" />
 
         <ul className="space-y-3">
           {sessions.map((session) => {
