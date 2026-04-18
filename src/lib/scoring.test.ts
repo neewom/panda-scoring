@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { computePlayerTotal } from './scoring'
+import { computePlayerTotal, computePerRoundTotal, resolvePlayerTotal } from './scoring'
 import { buildCustomGame } from './games'
 import { DEFAULT_GAMES } from './games-default'
-import type { ScoreEntry } from './sessions'
+import type { Game } from './games'
+import type { GameSession, ScoreEntry } from './sessions'
 
 const chateauCombo = DEFAULT_GAMES.find((g) => g.id === 'chateau-combo')!
 const endeavor = DEFAULT_GAMES.find((g) => g.id === 'endeavor')!
@@ -157,5 +158,122 @@ describe('buildCustomGame + computePlayerTotal', () => {
 
     // Total attendu : 1+2+3+4+5+6+7+8+9 = 45
     expect(computePlayerTotal(game, scores, 'p1')).toBe(45)
+  })
+})
+
+// ── Recalcul dynamique : régression et nouveaux cas ─────────────────────────
+
+describe('recalcul dynamique des totaux', () => {
+  // Simule un jeu custom créé AVANT le fix v2 (IDs = "1","2",...  formule = "1 + 2 + sanctuaires")
+  const legacyGame: Game = {
+    id: 'legacy-custom',
+    name: 'Vieux jeu custom',
+    players: { min: 2, max: 4 },
+    scoring_model: 'end_game',
+    scoring: [
+      { id: '1', label: '1', type: 'number', confident: true },
+      { id: '2', label: '2', type: 'number', confident: true },
+      { id: 'sanctuaires', label: 'Sanctuaires', type: 'number', confident: true },
+    ],
+    computed: [{ id: 'total', formula: '1 + 2 + sanctuaires', confident: true }],
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  }
+
+  it('partie avec total=0 stocké mais scores non nuls → recalcule correctement', () => {
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: '1', value: 10 },
+      { playerId: 'p1', fieldId: '2', value: 5 },
+      { playerId: 'p1', fieldId: 'sanctuaires', value: 3 },
+    ]
+    // Avant le fix : formula "1 + 2 + sanctuaires" échouait → 0
+    // Après le fix : la substitution inline produit "10 + 5 + 3" → 18
+    expect(computePlayerTotal(legacyGame, scores, 'p1')).toBe(18)
+  })
+
+  it('Endeavor hardcodé : le total recalculé inclut les bonus computed', () => {
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: 'villes', value: 5 },
+      { playerId: 'p1', fieldId: 'routes', value: 3 },
+      { playerId: 'p1', fieldId: 'industrie', value: 2 },
+      { playerId: 'p1', fieldId: 'culture', value: 1 },
+      { playerId: 'p1', fieldId: 'finances', value: 4 },
+      { playerId: 'p1', fieldId: 'politique', value: 2 },
+      { playerId: 'p1', fieldId: 'cartes_actifs', value: 3 },
+      { playerId: 'p1', fieldId: 'gouverneur_vide', value: true },  // +3
+      { playerId: 'p1', fieldId: 'universites', value: 2 },          // +6
+      { playerId: 'p1', fieldId: 'population_port', value: 9 },      // +3
+      { playerId: 'p1', fieldId: 'esclavage', value: 1 },
+    ]
+    const endeavor = DEFAULT_GAMES.find((g) => g.id === 'endeavor')!
+    expect(computePlayerTotal(endeavor, scores, 'p1')).toBe(31)
+  })
+
+  it('jeu per_round : le total recalculé = somme des manches', () => {
+    const perRoundGame: Game = {
+      id: 'per-round-test',
+      name: 'Jeu par manche',
+      players: { min: 2, max: 4 },
+      scoring_model: 'per_round',
+      scoring: [{ id: 'pts', label: 'Points', type: 'number', confident: true }],
+      computed: [{ id: 'total', formula: 'pts', confident: true }],
+      validated: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+    }
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: 'pts', value: 10, round: 1 },
+      { playerId: 'p1', fieldId: 'pts', value: 7, round: 2 },
+      { playerId: 'p1', fieldId: 'pts', value: 13, round: 3 },
+    ]
+    expect(computePerRoundTotal(perRoundGame, scores, 'p1')).toBe(30)
+  })
+})
+
+// ── resolvePlayerTotal ───────────────────────────────────────────────────────
+
+describe('resolvePlayerTotal', () => {
+  const baseSession: GameSession = {
+    id: 's1',
+    gameId: 'some-game',
+    players: ['p1', 'p2'],
+    createdAt: '2024-01-01T00:00:00.000Z',
+    status: 'finished',
+    scores: [
+      { playerId: 'p1', fieldId: '1', value: 10 },
+      { playerId: 'p1', fieldId: '2', value: 5 },
+      { playerId: 'p1', fieldId: 'sanctuaires', value: 3 },
+    ],
+  }
+
+  const legacyGame: Game = {
+    id: 'some-game',
+    name: 'Legacy',
+    players: { min: 2, max: 4 },
+    scoring_model: 'end_game',
+    scoring: [
+      { id: '1', label: '1', type: 'number', confident: true },
+      { id: '2', label: '2', type: 'number', confident: true },
+      { id: 'sanctuaires', label: 'Sanctuaires', type: 'number', confident: true },
+    ],
+    computed: [{ id: 'total', formula: '1 + 2 + sanctuaires', confident: true }],
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  }
+
+  it('recalcule depuis les scores quand le jeu est disponible', () => {
+    expect(resolvePlayerTotal(baseSession, legacyGame, 'p1')).toBe(18)
+  })
+
+  it('fallback sur playerTotals stockés quand le jeu est supprimé', () => {
+    const sessionWithTotals: GameSession = {
+      ...baseSession,
+      playerTotals: { p1: 42, p2: 17 },
+    }
+    expect(resolvePlayerTotal(sessionWithTotals, undefined, 'p1')).toBe(42)
+    expect(resolvePlayerTotal(sessionWithTotals, undefined, 'p2')).toBe(17)
+  })
+
+  it('retourne 0 si jeu supprimé et aucun total stocké', () => {
+    expect(resolvePlayerTotal(baseSession, undefined, 'p1')).toBe(0)
   })
 })

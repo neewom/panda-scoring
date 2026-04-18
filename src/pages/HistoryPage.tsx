@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { getFinishedSessions, resolveSessionPlayers } from '@/lib/sessions'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
-import { computePlayerTotal, computePerRoundTotal } from '@/lib/scoring'
+import { resolvePlayerTotal } from '@/lib/scoring'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -53,18 +53,15 @@ export default function HistoryPage() {
         <ul className="space-y-3">
           {sessions.map((session) => {
             const game = getGameById(session.gameId)
-            if (!game) return null
 
             const sessionPlayers = resolveSessionPlayers(session, allPlayers)
 
             const ranked = sessionPlayers
               .map((p) => ({
                 player: p,
-                total: game.scoring_model === 'per_round'
-                  ? computePerRoundTotal(game, session.scores, p.id)
-                  : computePlayerTotal(game, session.scores, p.id),
+                total: resolvePlayerTotal(session, game, p.id),
               }))
-              .sort((a, b) => game.lowest_wins ? a.total - b.total : b.total - a.total)
+              .sort((a, b) => (game?.lowest_wins ? a.total - b.total : b.total - a.total))
 
             const topScore = ranked[0]?.total ?? 0
             const winners = ranked.filter((r) => r.total === topScore)
@@ -78,11 +75,13 @@ export default function HistoryPage() {
               <li key={session.id}>
                 <button
                   onClick={() => navigate(`/history/${session.id}`)}
-                  aria-label={`Voir le détail de la partie de ${game.name}`}
+                  aria-label={`Voir le détail de la partie de ${game?.name ?? 'jeu supprimé'}`}
                   className="w-full text-left bg-white rounded-2xl border border-purple-100 px-4 py-4 space-y-2 hover:border-purple-300 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-purple-800">{game.name}</p>
+                    <p className={`font-bold ${game ? 'text-purple-800' : 'italic text-purple-400'}`}>
+                      {game?.name ?? 'Jeu supprimé'}
+                    </p>
                     <p className="text-xs text-purple-300 whitespace-nowrap">
                       {formatDate(session.createdAt)}
                     </p>
