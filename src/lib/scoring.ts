@@ -21,23 +21,32 @@ function evalFormula(formula: string, values: Record<string, number | boolean>):
     const identifierVals: (number | boolean)[] = []
 
     // Separate valid JS identifiers from invalid ones.
-    // Process invalid keys inline (longest first to avoid partial matches).
-    const invalidKeys = Object.keys(values)
-      .filter((k) => !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(k))
-      .sort((a, b) => b.length - a.length)
-
-    for (const key of invalidKeys) {
-      const numVal = typeof values[key] === 'boolean' ? (values[key] ? 1 : 0) : Number(values[key])
-      // Word-boundary replacement: "\b1\b" matches standalone "1" but not "1" inside "10".
-      const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      processed = processed.replace(new RegExp(`\\b${escaped}\\b`, 'g'), String(numVal))
-    }
-
+    // Invalid keys (e.g. digit-only IDs like "1", "3") cannot be passed as function
+    // parameters, so we substitute their values inline in one single pass using a
+    // Map callback. A single-pass replacement avoids the double-substitution bug
+    // where substituting key "3"→6 could later be overwritten when key "6" is processed.
+    const inlineSubstitutions = new Map<string, string>()
     for (const [key, val] of Object.entries(values)) {
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)) {
+      if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)) {
+        const numVal = typeof val === 'boolean' ? (val ? 1 : 0) : Number(val)
+        inlineSubstitutions.set(key, String(numVal))
+      } else {
         identifierKeys.push(key)
         identifierVals.push(val)
       }
+    }
+
+    if (inlineSubstitutions.size > 0) {
+      // Build alternation pattern, longest keys first to avoid partial-match shadowing.
+      const pattern = Array.from(inlineSubstitutions.keys())
+        .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .sort((a, b) => b.length - a.length)
+        .join('|')
+      // Single-pass replacement: each occurrence is replaced exactly once.
+      processed = processed.replace(
+        new RegExp(`\\b(${pattern})\\b`, 'g'),
+        (match) => inlineSubstitutions.get(match) ?? match
+      )
     }
 
     // eslint-disable-next-line no-new-func
