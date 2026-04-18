@@ -75,7 +75,7 @@ export default function PlayersPage() {
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-gradient-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-8">
-        <PageHeader title="Joueurs" />
+        <PageHeader title="Joueurs" backTo="/" />
 
         {/* Formulaire d'ajout */}
         <form onSubmit={handleAdd} className="flex gap-2">

@@ -2,23 +2,16 @@ import { useNavigate } from 'react-router-dom'
 
 interface PageHeaderProps {
   title: string
+  backTo: string
 }
 
-export default function PageHeader({ title }: PageHeaderProps) {
+export default function PageHeader({ title, backTo }: PageHeaderProps) {
   const navigate = useNavigate()
-
-  function goBack() {
-    if (window.history.length > 1) {
-      navigate(-1)
-    } else {
-      navigate('/')
-    }
-  }
 
   return (
     <div className="relative flex items-center h-10 mb-6">
       <button
-        onClick={goBack}
+        onClick={() => navigate(backTo)}
         aria-label="Retour"
         className="absolute left-0 text-sm text-purple-400 hover:text-purple-600 transition-colors whitespace-nowrap"
       >

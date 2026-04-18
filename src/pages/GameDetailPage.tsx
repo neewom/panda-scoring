@@ -31,7 +31,7 @@ export default function GameDetailPage() {
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header */}
-        <PageHeader title={game.name} />
+        <PageHeader title={game.name} backTo="/games" />
         {game.validated && (
           <div className="-mt-4 text-center">
             <span className="inline-block text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">

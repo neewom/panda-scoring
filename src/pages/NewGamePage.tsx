@@ -147,7 +147,7 @@ export default function NewGamePage() {
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header + stepper */}
-        <PageHeader title="Nouvelle partie" />
+        <PageHeader title="Nouvelle partie" backTo="/" />
         <div className="flex items-center justify-center gap-2 -mt-4">
           {([1, 2, 3] as Step[]).map((s) => (
             <div

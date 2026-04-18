@@ -279,7 +279,7 @@ export default function AddGamePage() {
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <PageHeader title="Nouveau jeu" />
+        <PageHeader title="Nouveau jeu" backTo="/games" />
 
         {/* ── Section 1 : Informations générales ── */}
         <div className="space-y-4">
