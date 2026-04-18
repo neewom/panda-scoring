@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { getSessionCount, clearSessions } from '@/lib/sessions'
 import { getPlayers, clearPlayers } from '@/lib/players'
 import { getCustomGames, clearCustomGames } from '@/lib/games'
+import PageHeader from '@/components/PageHeader'
 
 type ConfirmAction = 'sessions' | 'players' | 'customGames'
 
@@ -67,14 +68,11 @@ export default function SettingsPage() {
   const config = confirmAction ? CONFIRM_CONFIGS[confirmAction] : null
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="text-5xl">⚙️</div>
-          <h1 className="text-3xl font-bold text-purple-700">Paramètres</h1>
-        </div>
+        <PageHeader title="Paramètres" />
 
         {/* Success toast */}
         {successMessage && (

@@ -1,6 +1,7 @@
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
+import PageHeader from '@/components/PageHeader'
 
 const SCORING_MODEL_LABELS: Record<string, string> = {
   end_game: 'Fin de partie',
@@ -26,19 +27,18 @@ export default function GameDetailPage() {
   const scoringModelLabel = SCORING_MODEL_LABELS[game.scoring_model] ?? game.scoring_model
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <div className="text-5xl">🎲</div>
-          <h1 className="text-2xl font-bold text-purple-700">{game.name}</h1>
-          {game.validated && (
+        <PageHeader title={game.name} />
+        {game.validated && (
+          <div className="-mt-4 text-center">
             <span className="inline-block text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
               validé
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Informations */}
         <div className="bg-white rounded-2xl border border-purple-100 px-4 py-4 space-y-2">
@@ -146,23 +146,13 @@ export default function GameDetailPage() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/games')}
-            aria-label="Retour à la bibliothèque"
-            className="flex-1 h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
-          >
-            Retour
-          </Button>
-          <Button
-            onClick={() => navigate('/new-game', { state: { gameId: game.id } })}
-            aria-label={`Jouer à ${game.name}`}
-            className="flex-1 h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
-          >
-            🎮 Jouer
-          </Button>
-        </div>
+        <Button
+          onClick={() => navigate('/new-game', { state: { gameId: game.id } })}
+          aria-label={`Jouer à ${game.name}`}
+          className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
+        >
+          🎮 Jouer
+        </Button>
 
       </div>
     </div>

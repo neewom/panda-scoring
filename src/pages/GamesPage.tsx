@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGames, searchGames } from '@/lib/games'
+import PageHeader from '@/components/PageHeader'
 
 export default function GamesPage() {
   const [query, setQuery] = useState('')
@@ -9,12 +10,9 @@ export default function GamesPage() {
   const games = query ? searchGames(query) : getGames()
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <div className="text-5xl">🎲</div>
-          <h1 className="text-3xl font-bold text-purple-700">Jeux</h1>
-        </div>
+        <PageHeader title="Bibliothèque de jeux" />
 
         <Button
           onClick={() => navigate('/games/new')}

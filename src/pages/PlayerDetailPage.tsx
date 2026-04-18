@@ -1,9 +1,9 @@
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { getPlayers } from '@/lib/players'
 import { getGames } from '@/lib/games'
 import { getFinishedSessions } from '@/lib/sessions'
 import { computePlayerDetailStats } from '@/lib/player-stats'
+import PageHeader from '@/components/PageHeader'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', {
@@ -32,23 +32,11 @@ export default function PlayerDetailPage() {
   const stats = computePlayerDetailStats(player.id, sessions, games)
 
   return (
-    <div className="min-h-screen flex flex-col items-center px-4 py-12 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+    <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header */}
-        <div className="space-y-1">
-          <button
-            onClick={() => navigate('/players')}
-            aria-label="Retour aux joueurs"
-            className="text-sm text-purple-400 hover:text-purple-600 transition-colors"
-          >
-            ← Retour
-          </button>
-          <div className="flex items-center gap-3 pt-1">
-            <div className="text-4xl">👤</div>
-            <h1 className="text-2xl font-bold text-purple-700">{player.name}</h1>
-          </div>
-        </div>
+        <PageHeader title={player.name} />
 
         {stats.gamesPlayed === 0 ? (
           <div className="bg-white rounded-2xl border border-purple-100 px-4 py-8 text-center">
@@ -128,16 +116,6 @@ export default function PlayerDetailPage() {
             )}
           </>
         )}
-
-        {/* Bouton Retour */}
-        <Button
-          variant="outline"
-          onClick={() => navigate('/players')}
-          aria-label="Retour à la liste des joueurs"
-          className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
-        >
-          Retour aux joueurs
-        </Button>
 
       </div>
     </div>
