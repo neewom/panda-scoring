@@ -50,3 +50,22 @@ Avant tout commit, configure toujours ton identité Git :
 git config user.name "Glaude"
 git config user.email "glaude@panda-scoring.local"
 ```
+
+## Conventions UX
+- Mobile-first systématique
+- Autofocus sur le premier input de saisie à chaque navigation
+- Les CTAs principaux sont en full width sur mobile
+- Les boutons destructifs (suppression) ont une modale de confirmation
+- Tout état vide a un message + CTA d'action contextuel
+
+## Conventions de code
+- Toujours écrire les tests Vitest pertinents (pas besoin qu'on les liste un par un dans le prompt)
+- Toujours tester les cas nominaux + les cas limites évidents
+- Ne jamais modifier un test existant sans raison explicite
+- Toujours vérifier npm test && npm run build avant de push
+- Réutiliser les composants existants plutôt que dupliquer
+- Les nouvelles pages suivent le pattern : header avec "← Retour" à gauche + titre au centre
+
+## Conventions de prompt
+- Les prompts peuvent être concis : si le contexte est dans le CLAUDE.md, pas besoin de le répéter
+- En cas de doute sur un choix d'implémentation, choisir l'option la plus simple et la documenter dans le code
