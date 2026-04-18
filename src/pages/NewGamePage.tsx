@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   DndContext,
@@ -72,9 +72,12 @@ function SortablePlayerChip({ player, onRemove }: SortablePlayerChipProps) {
 export default function NewGamePage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const preSelectedGameId = (location.state as { gameId?: string } | null)?.gameId
+  const locationState = location.state as { gameId?: string; startAtStep?: number } | null
+  const preSelectedGameId = locationState?.gameId
 
-  const [step, setStep] = useState<Step>(1)
+  const [step, setStep] = useState<Step>(() =>
+    preSelectedGameId && locationState?.startAtStep === 2 ? 2 : 1
+  )
   const [query, setQuery] = useState('')
   const [selectedGame, setSelectedGame] = useState<Game | null>(() =>
     preSelectedGameId ? (getGameById(preSelectedGameId) ?? null) : null
@@ -82,6 +85,7 @@ export default function NewGamePage() {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
   const [players, setPlayers] = useState(() => getPlayers())
   const [newPlayerName, setNewPlayerName] = useState('')
+  const newPlayerInputRef = useRef<HTMLInputElement>(null)
 
   const filteredGames = searchGames(query)
 
@@ -98,6 +102,8 @@ export default function NewGamePage() {
     setPlayers(getPlayers())
     setSelectedPlayerIds((prev) => [...prev, player.id])
     setNewPlayerName('')
+    // Restore focus so the user can immediately type the next player name
+    newPlayerInputRef.current?.focus()
   }
 
   function addToSelection(id: string) {
@@ -252,6 +258,7 @@ export default function NewGamePage() {
               {/* Ajout rapide inline */}
               <form onSubmit={handleAddPlayer} className="flex gap-2">
                 <input
+                  ref={newPlayerInputRef}
                   type="text"
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}

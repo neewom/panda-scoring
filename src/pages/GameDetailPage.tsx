@@ -147,7 +147,7 @@ export default function GameDetailPage() {
 
         {/* Actions */}
         <Button
-          onClick={() => navigate('/new-game', { state: { gameId: game.id } })}
+          onClick={() => navigate('/new-game', { state: { gameId: game.id, startAtStep: 2 } })}
           aria-label={`Jouer à ${game.name}`}
           className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
         >
