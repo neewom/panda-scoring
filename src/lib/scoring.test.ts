@@ -209,6 +209,93 @@ describe('recalcul dynamique des totaux', () => {
     expect(computePlayerTotal(endeavor, scores, 'p1')).toBe(31)
   })
 
+  it('pas de double-substitution : champ "3" (val=6) ne doit pas être réécrasé par champ "6"', () => {
+    // Régression : avec la substitution séquentielle, remplacer "3"→6 dans la formule
+    // puis "6"→10 réécrasait le "6" substitué, gonflant le total.
+    const faraway9Game: Game = {
+      id: 'faraway-9',
+      name: 'Faraway 9 catégories',
+      players: { min: 2, max: 6 },
+      scoring_model: 'end_game',
+      scoring: [
+        { id: '1', label: '1', type: 'number', confident: true },
+        { id: '2', label: '2', type: 'number', confident: true },
+        { id: '3', label: '3', type: 'number', confident: true },
+        { id: '4', label: '4', type: 'number', confident: true },
+        { id: '5', label: '5', type: 'number', confident: true },
+        { id: '6', label: '6', type: 'number', confident: true },
+        { id: '7', label: '7', type: 'number', confident: true },
+        { id: '8', label: '8', type: 'number', confident: true },
+        { id: 'sanctuaires', label: 'Sanctuaires', type: 'number', confident: true },
+      ],
+      computed: [{ id: 'total', formula: '1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + sanctuaires', confident: true }],
+      validated: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+    }
+    // Scores type "Fifi" : champ "3"=6, champ "6"=10 → risque de collision
+    const scores: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: '1', value: 4 },
+      { playerId: 'p1', fieldId: '2', value: 8 },
+      { playerId: 'p1', fieldId: '3', value: 6 },
+      { playerId: 'p1', fieldId: '4', value: 6 },
+      { playerId: 'p1', fieldId: '5', value: 18 },
+      { playerId: 'p1', fieldId: '6', value: 10 },
+      { playerId: 'p1', fieldId: '7', value: 4 },
+      { playerId: 'p1', fieldId: '8', value: 4 },
+      { playerId: 'p1', fieldId: 'sanctuaires', value: 4 },
+    ]
+    // 4+8+6+6+18+10+4+4+4 = 64
+    expect(computePlayerTotal(faraway9Game, scores, 'p1')).toBe(64)
+  })
+
+  it('pas de double-substitution : plusieurs joueurs indépendants', () => {
+    const faraway9Game: Game = {
+      id: 'faraway-9b',
+      name: 'Faraway multi',
+      players: { min: 2, max: 6 },
+      scoring_model: 'end_game',
+      scoring: [
+        { id: '1', label: '1', type: 'number', confident: true },
+        { id: '2', label: '2', type: 'number', confident: true },
+        { id: '3', label: '3', type: 'number', confident: true },
+        { id: '4', label: '4', type: 'number', confident: true },
+        { id: '5', label: '5', type: 'number', confident: true },
+        { id: '6', label: '6', type: 'number', confident: true },
+        { id: '7', label: '7', type: 'number', confident: true },
+        { id: '8', label: '8', type: 'number', confident: true },
+        { id: 'sanctuaires', label: 'Sanctuaires', type: 'number', confident: true },
+      ],
+      computed: [{ id: 'total', formula: '1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + sanctuaires', confident: true }],
+      validated: true,
+      createdAt: '2024-01-01T00:00:00.000Z',
+    }
+    const scoresP1: ScoreEntry[] = [
+      { playerId: 'p1', fieldId: '1', value: 4 },
+      { playerId: 'p1', fieldId: '2', value: 8 },
+      { playerId: 'p1', fieldId: '3', value: 6 },
+      { playerId: 'p1', fieldId: '4', value: 6 },
+      { playerId: 'p1', fieldId: '5', value: 18 },
+      { playerId: 'p1', fieldId: '6', value: 10 },
+      { playerId: 'p1', fieldId: '7', value: 4 },
+      { playerId: 'p1', fieldId: '8', value: 4 },
+      { playerId: 'p1', fieldId: 'sanctuaires', value: 4 },
+    ]
+    const scoresP2: ScoreEntry[] = [
+      { playerId: 'p2', fieldId: '1', value: 6 },
+      { playerId: 'p2', fieldId: '2', value: 6 },
+      { playerId: 'p2', fieldId: '3', value: 8 },
+      { playerId: 'p2', fieldId: '4', value: 4 },
+      { playerId: 'p2', fieldId: '5', value: 12 },
+      { playerId: 'p2', fieldId: '6', value: 8 },
+      { playerId: 'p2', fieldId: '7', value: 6 },
+      { playerId: 'p2', fieldId: '8', value: 5 },
+      { playerId: 'p2', fieldId: 'sanctuaires', value: 4 },
+    ]
+    const allScores = [...scoresP1, ...scoresP2]
+    expect(computePlayerTotal(faraway9Game, allScores, 'p1')).toBe(64)  // 4+8+6+6+18+10+4+4+4
+    expect(computePlayerTotal(faraway9Game, allScores, 'p2')).toBe(59)  // 6+6+8+4+12+8+6+5+4
+  })
+
   it('jeu per_round : le total recalculé = somme des manches', () => {
     const perRoundGame: Game = {
       id: 'per-round-test',
