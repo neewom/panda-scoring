@@ -279,7 +279,7 @@ export default function AddGamePage() {
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <PageHeader title="Nouveau jeu" onBack={() => navigate('/games')} />
+        <PageHeader title="Nouveau jeu" onBack={() => navigate('/games')} backLabel="Bibliothèque" />
 
         {/* ── Section 1 : Informations générales ── */}
         <div className="space-y-4">
