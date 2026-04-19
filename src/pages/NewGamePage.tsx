@@ -158,6 +158,15 @@ export default function NewGamePage() {
                   ? () => setStep(1)
                   : () => setStep(2)
           }
+          backLabel={
+            step === 1
+              ? undefined
+              : step === 2 && locationState?.startAtStep === 2
+                ? (selectedGame?.name ?? 'Bibliothèque')
+                : step === 2
+                  ? 'Étape 1'
+                  : 'Étape 2'
+          }
         />
         <div className="flex items-center justify-center gap-2 -mt-4">
           {([1, 2, 3] as Step[]).map((s) => (
