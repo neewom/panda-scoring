@@ -8,6 +8,7 @@ import {
   getSessionById,
   updateScore,
   finishSession,
+  updateSessionProgress,
   type GameSession as GameSessionType,
   type ScoreEntry,
 } from '@/lib/sessions'
@@ -29,10 +30,12 @@ export default function GameSession() {
     .map((id) => allPlayers.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => p !== undefined)
 
-  const [fieldIndex, setFieldIndex] = useState(0)
-  const [playerIndex, setPlayerIndex] = useState(0)
-  const [round, setRound] = useState(1)
-  const [phase, setPhase] = useState<'scoring' | 'round_summary'>('scoring')
+  const [fieldIndex, setFieldIndex] = useState(() => session?.progress?.fieldIndex ?? 0)
+  const [playerIndex, setPlayerIndex] = useState(() => session?.progress?.playerIndex ?? 0)
+  const [round, setRound] = useState(() => session?.progress?.round ?? 1)
+  const [phase, setPhase] = useState<'scoring' | 'round_summary'>(
+    () => session?.progress?.phase ?? 'scoring'
+  )
 
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -45,6 +48,12 @@ export default function GameSession() {
   useEffect(() => {
     inputRef.current?.focus()
   }, [fieldIndex, playerIndex, round])
+
+  // Persist navigation cursor so the session can be resumed
+  useEffect(() => {
+    if (!session?.id) return
+    updateSessionProgress(session.id, { fieldIndex, playerIndex, round, phase })
+  }, [session?.id, fieldIndex, playerIndex, round, phase])
 
   if (!session || !game || sessionPlayers.length === 0) {
     return <Navigate to="/" replace />

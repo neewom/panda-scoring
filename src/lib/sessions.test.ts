@@ -46,7 +46,15 @@ describe('sessions', () => {
   })
 })
 
-import { updateScore, finishSession, resolveSessionPlayers, getFinishedSessions } from './sessions'
+import {
+  updateScore,
+  finishSession,
+  resolveSessionPlayers,
+  getFinishedSessions,
+  getInProgressSessions,
+  updateSessionProgress,
+  abandonSession,
+} from './sessions'
 
 describe('updateScore', () => {
   beforeEach(() => {
@@ -131,6 +139,82 @@ describe('clearSessions / getSessionCount', () => {
     clearSessions()
     expect(localStorageMock.getItem('panda-sessions')).toBeNull()
     expect(getSessionCount()).toBe(0)
+  })
+})
+
+describe('getInProgressSessions', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('retourne uniquement les sessions in_progress', () => {
+    const s1 = createSession('game', ['p1'])
+    const s2 = createSession('game', ['p2'])
+    finishSession(s1.id, { p1: 'Alice' })
+    const result = getInProgressSessions()
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(s2.id)
+  })
+
+  it('retourne un tableau vide si aucune session en cours', () => {
+    const s = createSession('game', ['p1'])
+    finishSession(s.id, { p1: 'Alice' })
+    expect(getInProgressSessions()).toHaveLength(0)
+  })
+})
+
+describe('updateSessionProgress', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('sauvegarde la progression dans la session', () => {
+    const session = createSession('game', ['p1'])
+    updateSessionProgress(session.id, { fieldIndex: 2, playerIndex: 1, round: 3, phase: 'scoring' })
+    const updated = getSessionById(session.id)
+    expect(updated?.progress).toEqual({ fieldIndex: 2, playerIndex: 1, round: 3, phase: 'scoring' })
+  })
+
+  it('écrase la progression précédente', () => {
+    const session = createSession('game', ['p1'])
+    updateSessionProgress(session.id, { fieldIndex: 0, playerIndex: 0, round: 1, phase: 'scoring' })
+    updateSessionProgress(session.id, { fieldIndex: 1, playerIndex: 0, round: 1, phase: 'round_summary' })
+    const updated = getSessionById(session.id)
+    expect(updated?.progress?.fieldIndex).toBe(1)
+    expect(updated?.progress?.phase).toBe('round_summary')
+  })
+
+  it('ne fait rien pour un id inconnu', () => {
+    expect(() => updateSessionProgress('unknown', { fieldIndex: 0, playerIndex: 0, round: 1, phase: 'scoring' })).not.toThrow()
+  })
+})
+
+describe('abandonSession', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('supprime la session du localStorage', () => {
+    const s = createSession('game', ['p1'])
+    abandonSession(s.id)
+    expect(getSessionById(s.id)).toBeUndefined()
+  })
+
+  it('ne supprime que la session ciblée', () => {
+    const s1 = createSession('game', ['p1'])
+    const s2 = createSession('game', ['p2'])
+    abandonSession(s1.id)
+    expect(getSessionById(s1.id)).toBeUndefined()
+    expect(getSessionById(s2.id)).toBeDefined()
+  })
+
+  it('ne fait rien pour un id inconnu', () => {
+    createSession('game', ['p1'])
+    expect(() => abandonSession('unknown')).not.toThrow()
+    expect(getSessionCount()).toBe(1)
   })
 })
 

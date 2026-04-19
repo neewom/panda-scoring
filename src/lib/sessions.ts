@@ -6,6 +6,13 @@ export interface ScoreEntry {
   detail?: string
 }
 
+export interface SessionProgress {
+  fieldIndex: number
+  playerIndex: number
+  round: number
+  phase: 'scoring' | 'round_summary'
+}
+
 export interface GameSession {
   id: string
   gameId: string
@@ -17,6 +24,7 @@ export interface GameSession {
   status: 'in_progress' | 'finished'
   scores: ScoreEntry[]
   currentRound?: number
+  progress?: SessionProgress
 }
 
 export interface SessionPlayer {
@@ -58,8 +66,24 @@ export function getSessionById(id: string): GameSession | undefined {
   return getSessions().find((s) => s.id === id)
 }
 
+export function getInProgressSessions(): GameSession[] {
+  return getSessions().filter((s) => s.status === 'in_progress')
+}
+
 export function getFinishedSessions(): GameSession[] {
   return getSessions().filter((s) => s.status === 'finished')
+}
+
+export function updateSessionProgress(sessionId: string, progress: SessionProgress): void {
+  const sessions = getSessions()
+  const idx = sessions.findIndex((s) => s.id === sessionId)
+  if (idx === -1) return
+  sessions[idx] = { ...sessions[idx], progress }
+  saveSessions(sessions)
+}
+
+export function abandonSession(sessionId: string): void {
+  saveSessions(getSessions().filter((s) => s.id !== sessionId))
 }
 
 export function updateScore(sessionId: string, entry: ScoreEntry): void {
