@@ -25,7 +25,7 @@ export default function HistoryDetailPage() {
       <div className="w-full max-w-2xl space-y-8">
 
         {/* Header */}
-        <PageHeader title="Partie terminée 🎉" />
+        <PageHeader title="Partie terminée 🎉" onBack={() => navigate('/history')} />
         <p className={`-mt-4 text-sm font-medium text-center ${game ? 'text-purple-400' : 'italic text-purple-300'}`}>
           {game?.name ?? 'Jeu supprimé'}
         </p>

@@ -31,7 +31,7 @@ export default function GameDetailPage() {
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header */}
-        <PageHeader title={game.name} />
+        <PageHeader title={game.name} onBack={() => navigate('/games')} />
         {game.validated && (
           <div className="-mt-4 text-center">
             <span className="inline-block text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
@@ -147,7 +147,7 @@ export default function GameDetailPage() {
 
         {/* Actions */}
         <Button
-          onClick={() => navigate('/new-game', { state: { gameId: game.id } })}
+          onClick={() => navigate('/new-game', { state: { gameId: game.id, startAtStep: 2 } })}
           aria-label={`Jouer à ${game.name}`}
           className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
         >

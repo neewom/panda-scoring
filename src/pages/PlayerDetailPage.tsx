@@ -36,7 +36,7 @@ export default function PlayerDetailPage() {
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header */}
-        <PageHeader title={player.name} />
+        <PageHeader title={player.name} onBack={() => navigate('/players')} />
 
         {stats.gamesPlayed === 0 ? (
           <div className="bg-white rounded-2xl border border-purple-100 px-4 py-8 text-center">

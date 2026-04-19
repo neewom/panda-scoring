@@ -52,7 +52,8 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
   const winnerNames = winners.map((w) => w.player.name)
   const isTie = winners.length > 1
 
-  // Table columns — per_round uses rounds as columns, end_game uses scoring fields
+  // Table columns — per_round uses rounds as columns, end_game uses scoring fields.
+  // The "Total" column is omitted: it is already visible in the ranked list above.
   const perRoundScores = session.scores.filter((s) => s.round !== undefined)
   const roundsPlayed =
     isPerRound && perRoundScores.length > 0
@@ -62,21 +63,23 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
   type TableCol = { id: string; label: string; roundNum?: number }
 
   const tableCols: TableCol[] = isPerRound
-    ? [
-        ...Array.from({ length: roundsPlayed }, (_, i) => ({
-          id: `round_${i + 1}`,
-          label: `Manche ${i + 1}`,
-          roundNum: i + 1,
-        })),
-        { id: 'total', label: 'Total' },
-      ]
+    ? Array.from({ length: roundsPlayed }, (_, i) => ({
+        id: `round_${i + 1}`,
+        label: `Manche ${i + 1}`,
+        roundNum: i + 1,
+      }))
     : [
         ...game.scoring.map((f) => ({ id: f.id, label: f.label })),
         ...game.computed
           .filter((f) => f.id !== 'total')
           .map((f) => ({ id: f.id, label: f.label ?? f.id })),
-        { id: 'total', label: 'Total' },
       ]
+
+  // Breakdown table rows follow game order (order chosen at step 2), not ranking.
+  const tableRows = sessionPlayers.map((p) => ({
+    player: p,
+    scores: computePlayerScores(game, session.scores, p.id),
+  }))
 
   return (
     <>
@@ -146,7 +149,7 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
             </tr>
           </thead>
           <tbody>
-            {ranked.map(({ player, scores, total }) => {
+            {tableRows.map(({ player, scores }) => {
               const isWinner = winnerIds.has(player.id)
               return (
                 <tr
@@ -166,25 +169,13 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
                     </span>
                   </td>
                   {tableCols.map((col) => {
-                    let cellValue: string | number
-                    if (isPerRound) {
-                      cellValue =
-                        col.roundNum !== undefined
-                          ? computePlayerTotal(game, session.scores, player.id, col.roundNum)
-                          : total
-                    } else {
-                      cellValue = formatCellValue(scores[col.id])
-                    }
+                    const cellValue: string | number = isPerRound
+                      ? computePlayerTotal(game, session.scores, player.id, col.roundNum)
+                      : formatCellValue(scores[col.id])
                     return (
                       <td
                         key={col.id}
-                        className={`px-3 py-2 text-center whitespace-nowrap ${
-                          col.id === 'total'
-                            ? isWinner
-                              ? 'font-extrabold text-purple-700'
-                              : 'font-bold text-purple-600'
-                            : 'text-purple-800'
-                        }`}
+                        className="px-3 py-2 text-center whitespace-nowrap text-purple-800"
                       >
                         {cellValue}
                       </td>

@@ -4,6 +4,7 @@ import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
 import GameResultSummary from '@/components/GameResultSummary'
+import PageHeader from '@/components/PageHeader'
 
 export default function GameResults() {
   const { id } = useParams<{ id: string }>()
@@ -23,10 +24,8 @@ export default function GameResults() {
       <div className="w-full max-w-2xl space-y-8">
 
         {/* Header */}
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold text-purple-700">Partie terminée 🎉</h1>
-          <p className="text-sm font-medium text-purple-400">{game.name}</p>
-        </div>
+        <PageHeader title="Partie terminée 🎉" />
+        <p className="-mt-4 text-sm font-medium text-purple-400 text-center">{game.name}</p>
 
         <GameResultSummary game={game} session={session} sessionPlayers={sessionPlayers} />
 
