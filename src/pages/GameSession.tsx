@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import PageHeader from '@/components/PageHeader'
 import { getGameById, computeRoundCount } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
 import {
@@ -202,10 +203,13 @@ export default function GameSession() {
   // --- Round summary (per_round) ---
   if (phase === 'round_summary') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 pb-24 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <p className="text-sm text-purple-400">{game.name}</p>
-          <h1 className="text-2xl font-bold text-purple-700">Round {round} terminé</h1>
+      <div className="min-h-screen flex flex-col items-center px-4 py-8 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
+        <div className="w-full max-w-sm space-y-6">
+          <PageHeader
+            title={`Round ${round} terminé`}
+            onBack={handlePerRoundPrev}
+          />
+          <p className="text-sm text-purple-400 text-center">{game.name}</p>
           {totalRounds && (
             <p className="text-xs text-purple-400">
               Round {round} / {totalRounds}
@@ -266,12 +270,11 @@ export default function GameSession() {
       <div className="w-full max-w-sm space-y-4">
 
         {/* Header */}
-        <div className="text-center">
-          <p className="text-sm text-purple-400">{game.name}</p>
-          <h2 className="text-xl font-bold text-purple-700">
-            {isEndGame ? currentField.label : `Round ${round}`}
-          </h2>
-        </div>
+        <PageHeader
+          title={isEndGame ? currentField.label : `Round ${round}`}
+          onBack={isFirstStep ? undefined : (isEndGame ? handleEndGamePrev : handlePerRoundPrev)}
+        />
+        <p className="-mt-4 text-sm text-purple-400 text-center">{game.name}</p>
 
         {/* Progress bar (end_game) */}
         {isEndGame && (
@@ -405,15 +408,6 @@ export default function GameSession() {
 
         {/* Actions */}
         <div className="flex gap-2">
-          {!isFirstStep && (
-            <Button
-              onClick={isEndGame ? handleEndGamePrev : handlePerRoundPrev}
-              aria-label="Étape précédente"
-              className="h-12 px-4 bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold rounded-2xl"
-            >
-              ← Précédent
-            </Button>
-          )}
           <Button
             onClick={isEndGame ? handleEndGameNext : handlePerRoundNext}
             className="flex-1 h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"

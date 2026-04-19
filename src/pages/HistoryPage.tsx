@@ -31,7 +31,7 @@ export default function HistoryPage() {
     return (
       <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
         <div className="w-full max-w-sm">
-          <PageHeader title="Historique" backTo="/" />
+          <PageHeader title="Historique" />
           <div className="flex flex-col items-center gap-6 mt-8">
             <div className="text-5xl">📜</div>
             <p className="text-purple-400">Aucune partie jouée pour le moment.</p>
@@ -51,7 +51,7 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
-        <PageHeader title="Historique" backTo="/" />
+        <PageHeader title="Historique" />
 
         <ul className="space-y-3">
           {sessions.map((session) => {

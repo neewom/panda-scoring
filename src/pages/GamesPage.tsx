@@ -12,7 +12,7 @@ export default function GamesPage() {
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
       <div className="w-full max-w-sm space-y-6">
-        <PageHeader title="Bibliothèque de jeux" backTo="/" />
+        <PageHeader title="Bibliothèque de jeux" />
 
         <Button
           onClick={() => navigate('/games/new')}

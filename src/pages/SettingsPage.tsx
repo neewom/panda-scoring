@@ -72,7 +72,7 @@ export default function SettingsPage() {
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <PageHeader title="Paramètres" backTo="/" />
+        <PageHeader title="Paramètres" />
 
         {/* Success toast */}
         {successMessage && (

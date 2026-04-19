@@ -147,7 +147,18 @@ export default function NewGamePage() {
       <div className="w-full max-w-sm space-y-6">
 
         {/* Header + stepper */}
-        <PageHeader title="Nouvelle partie" backTo="/" />
+        <PageHeader
+          title="Nouvelle partie"
+          onBack={
+            step === 1
+              ? undefined
+              : step === 2 && locationState?.startAtStep === 2 && preSelectedGameId
+                ? () => navigate(`/games/${preSelectedGameId}`)
+                : step === 2
+                  ? () => setStep(1)
+                  : () => setStep(2)
+          }
+        />
         <div className="flex items-center justify-center gap-2 -mt-4">
           {([1, 2, 3] as Step[]).map((s) => (
             <div
