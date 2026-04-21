@@ -82,8 +82,12 @@ export function updateSessionProgress(sessionId: string, progress: SessionProgre
   saveSessions(sessions)
 }
 
-export function abandonSession(sessionId: string): void {
+export function deleteSession(sessionId: string): void {
   saveSessions(getSessions().filter((s) => s.id !== sessionId))
+}
+
+export function abandonSession(sessionId: string): void {
+  deleteSession(sessionId)
 }
 
 export function updateScore(sessionId: string, entry: ScoreEntry): void {

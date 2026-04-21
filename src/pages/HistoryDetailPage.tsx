@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
-import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
+import { getSessionById, deleteSession, resolveSessionPlayers } from '@/lib/sessions'
 import { resolvePlayerTotal } from '@/lib/scoring'
 import GameResultSummary from '@/components/GameResultSummary'
 import PageHeader from '@/components/PageHeader'
@@ -16,8 +17,15 @@ export default function HistoryDetailPage() {
   const allPlayers = getPlayers()
   const sessionPlayers = session ? resolveSessionPlayers(session, allPlayers) : []
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
   if (!session || sessionPlayers.length === 0) {
     return <Navigate to="/history" replace />
+  }
+
+  function handleDeleteConfirm() {
+    deleteSession(session!.id)
+    navigate('/history', { replace: true })
   }
 
   return (
@@ -53,16 +61,61 @@ export default function HistoryDetailPage() {
         )}
 
         {/* Actions */}
-        <Button
-          variant="outline"
-          onClick={() => navigate('/history')}
-          aria-label="Retour à l'historique"
-          className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
-        >
-          📜 Retour à l'historique
-        </Button>
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/history')}
+            aria-label="Retour à l'historique"
+            className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600"
+          >
+            📜 Retour à l'historique
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteModal(true)}
+            aria-label="Supprimer cette partie"
+            className="w-full h-10 text-sm font-medium rounded-2xl border border-red-200 text-red-400 hover:bg-red-50 hover:border-red-300"
+          >
+            🗑️ Supprimer cette partie
+          </Button>
+        </div>
 
       </div>
+
+      {showDeleteModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        >
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs space-y-4 shadow-xl">
+            <h2 id="delete-title" className="font-bold text-purple-800 text-lg">
+              Supprimer cette partie ?
+            </h2>
+            <p className="text-sm text-purple-500">
+              Cette action est irréversible.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                aria-label="Annuler"
+                className="flex-1 h-10 rounded-xl border-purple-200 text-purple-600"
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                aria-label="Confirmer la suppression"
+                className="flex-1 h-10 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold"
+              >
+                Supprimer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

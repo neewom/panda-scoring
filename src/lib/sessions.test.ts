@@ -54,6 +54,7 @@ import {
   getInProgressSessions,
   updateSessionProgress,
   abandonSession,
+  deleteSession,
 } from './sessions'
 
 describe('updateScore', () => {
@@ -214,6 +215,37 @@ describe('abandonSession', () => {
   it('ne fait rien pour un id inconnu', () => {
     createSession('game', ['p1'])
     expect(() => abandonSession('unknown')).not.toThrow()
+    expect(getSessionCount()).toBe(1)
+  })
+})
+
+describe('deleteSession', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('supprime une partie terminée du localStorage', () => {
+    const s = createSession('game', ['p1'])
+    finishSession(s.id, { p1: 'Alice' })
+    deleteSession(s.id)
+    expect(getSessionById(s.id)).toBeUndefined()
+    expect(getFinishedSessions()).toHaveLength(0)
+  })
+
+  it('ne supprime que la session ciblée', () => {
+    const s1 = createSession('game', ['p1'])
+    const s2 = createSession('game', ['p2'])
+    finishSession(s1.id, { p1: 'Alice' })
+    finishSession(s2.id, { p2: 'Bob' })
+    deleteSession(s1.id)
+    expect(getSessionById(s1.id)).toBeUndefined()
+    expect(getSessionById(s2.id)).toBeDefined()
+  })
+
+  it('ne fait rien pour un id inconnu', () => {
+    createSession('game', ['p1'])
+    expect(() => deleteSession('unknown')).not.toThrow()
     expect(getSessionCount()).toBe(1)
   })
 })
