@@ -163,12 +163,13 @@ export default function GameDetailPage() {
         </Button>
 
         {isCustomGame && (
-          <button
+          <Button
+            variant="outline"
             onClick={() => setShowDeleteModal(true)}
-            className="w-full text-sm text-red-400 hover:text-red-600 py-2 transition-colors"
+            className="w-full border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 hover:text-red-600"
           >
             Supprimer ce jeu
-          </button>
+          </Button>
         )}
 
       </div>
