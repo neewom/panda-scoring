@@ -61,6 +61,11 @@ export function getGameById(id: string): Game | undefined {
   return getGames().find((g) => g.id === id)
 }
 
+export function deleteGame(id: string): void {
+  const custom = getCustomGames().filter((g) => g.id !== id)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
+}
+
 export function clearCustomGames(): void {
   localStorage.removeItem(STORAGE_KEY)
 }

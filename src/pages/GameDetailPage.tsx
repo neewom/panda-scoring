@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getGameById } from '@/lib/games'
+import { getGameById, getCustomGames, deleteGame } from '@/lib/games'
 import PageHeader from '@/components/PageHeader'
 
 const SCORING_MODEL_LABELS: Record<string, string> = {
@@ -16,6 +17,7 @@ function prettifyFormula(formula: string): string {
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const game = id ? getGameById(id) : undefined
 
@@ -23,8 +25,14 @@ export default function GameDetailPage() {
     return <Navigate to="/games" replace />
   }
 
+  const isCustomGame = getCustomGames().some((g) => g.id === game.id)
   const computedFields = game.computed.filter((f) => f.id !== 'total')
   const scoringModelLabel = SCORING_MODEL_LABELS[game.scoring_model] ?? game.scoring_model
+
+  function handleDeleteConfirm() {
+    deleteGame(game!.id)
+    navigate('/games', { replace: true })
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center px-4 py-12 bg-linear-to-br from-yellow-50 via-pink-50 to-purple-50">
@@ -154,7 +162,46 @@ export default function GameDetailPage() {
           🎮 Jouer
         </Button>
 
+        {isCustomGame && (
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full text-sm text-red-400 hover:text-red-600 py-2 transition-colors"
+          >
+            Supprimer ce jeu
+          </button>
+        )}
+
       </div>
+
+      {showDeleteModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-game-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        >
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs space-y-4 shadow-xl">
+            <h2 id="delete-game-title" className="font-bold text-purple-800 text-lg leading-snug">
+              Supprimer ce jeu ?
+            </h2>
+            <p className="text-sm text-purple-500">
+              Les parties déjà jouées seront conservées dans l'historique.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setShowDeleteModal(false)}>
+                Annuler
+              </Button>
+              <Button
+                onClick={handleDeleteConfirm}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+              >
+                Supprimer
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

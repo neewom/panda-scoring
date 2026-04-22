@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, getCustomGames, clearCustomGames, type Game } from './games'
+import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, getCustomGames, clearCustomGames, deleteGame, type Game } from './games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -147,6 +147,27 @@ describe('getCustomGames / clearCustomGames', () => {
   it('clearCustomGames sur une liste vide ne génère pas d\'erreur', () => {
     expect(() => clearCustomGames()).not.toThrow()
     expect(getCustomGames()).toEqual([])
+  })
+
+  it('deleteGame supprime uniquement le jeu ciblé', () => {
+    const other: Game = { ...CUSTOM, id: 'other-game', name: 'Other' }
+    addGame(CUSTOM)
+    addGame(other)
+    deleteGame('custom-test')
+    const custom = getCustomGames()
+    expect(custom).toHaveLength(1)
+    expect(custom[0].id).toBe('other-game')
+  })
+
+  it('deleteGame ne supprime pas les jeux hardcodés', () => {
+    deleteGame('endeavor')
+    expect(getGameById('endeavor')).toBeDefined()
+  })
+
+  it('deleteGame sur un id inexistant ne génère pas d\'erreur', () => {
+    addGame(CUSTOM)
+    expect(() => deleteGame('nonexistent')).not.toThrow()
+    expect(getCustomGames()).toHaveLength(1)
   })
 })
 
