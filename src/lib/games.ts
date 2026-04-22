@@ -43,6 +43,7 @@ export interface Game {
 }
 
 const STORAGE_KEY = 'panda-custom-games'
+const HIDDEN_KEY = 'panda-hidden-games'
 
 export function getCustomGames(): Game[] {
   try {
@@ -53,8 +54,19 @@ export function getCustomGames(): Game[] {
   }
 }
 
+function getHiddenGameIds(): string[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
 export function getGames(): Game[] {
-  return [...DEFAULT_GAMES, ...getCustomGames()]
+  const hidden = getHiddenGameIds()
+  const visibleDefaults = DEFAULT_GAMES.filter((g) => !hidden.includes(g.id))
+  return [...visibleDefaults, ...getCustomGames()]
 }
 
 export function getGameById(id: string): Game | undefined {
@@ -62,8 +74,15 @@ export function getGameById(id: string): Game | undefined {
 }
 
 export function deleteGame(id: string): void {
+  // Remove from custom games if present
   const custom = getCustomGames().filter((g) => g.id !== id)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
+  // Add to hidden list (covers both custom and default games)
+  const hidden = getHiddenGameIds()
+  if (!hidden.includes(id)) {
+    hidden.push(id)
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(hidden))
+  }
 }
 
 export function clearCustomGames(): void {

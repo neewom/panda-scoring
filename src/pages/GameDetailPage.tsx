@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { getGameById, getCustomGames, deleteGame } from '@/lib/games'
+import { getGameById, deleteGame } from '@/lib/games'
 import PageHeader from '@/components/PageHeader'
 
 const SCORING_MODEL_LABELS: Record<string, string> = {
@@ -25,7 +25,6 @@ export default function GameDetailPage() {
     return <Navigate to="/games" replace />
   }
 
-  const isCustomGame = getCustomGames().some((g) => g.id === game.id)
   const computedFields = game.computed.filter((f) => f.id !== 'total')
   const scoringModelLabel = SCORING_MODEL_LABELS[game.scoring_model] ?? game.scoring_model
 
@@ -162,15 +161,13 @@ export default function GameDetailPage() {
           🎮 Jouer
         </Button>
 
-        {isCustomGame && (
-          <Button
+        <Button
             variant="outline"
             onClick={() => setShowDeleteModal(true)}
             className="w-full border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 hover:text-red-600"
           >
             Supprimer ce jeu
           </Button>
-        )}
 
       </div>
 

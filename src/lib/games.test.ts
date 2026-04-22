@@ -159,9 +159,10 @@ describe('getCustomGames / clearCustomGames', () => {
     expect(custom[0].id).toBe('other-game')
   })
 
-  it('deleteGame ne supprime pas les jeux hardcodés', () => {
+  it('deleteGame masque un jeu hardcodé via la blocklist', () => {
     deleteGame('endeavor')
-    expect(getGameById('endeavor')).toBeDefined()
+    expect(getGameById('endeavor')).toBeUndefined()
+    expect(getGames().find((g) => g.id === 'endeavor')).toBeUndefined()
   })
 
   it('deleteGame sur un id inexistant ne génère pas d\'erreur', () => {
