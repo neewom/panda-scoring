@@ -25,6 +25,7 @@ function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/games" element={<GamesPage />} />
         <Route path="/games/new" element={<AddGamePage />} />
+        <Route path="/games/:id/edit" element={<AddGamePage />} />
         <Route path="/games/:id" element={<GameDetailPage />} />
         <Route path="/game/:id" element={<GameSession />} />
         <Route path="/game/:id/results" element={<GameResults />} />

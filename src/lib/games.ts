@@ -73,6 +73,19 @@ export function getGameById(id: string): Game | undefined {
   return getGames().find((g) => g.id === id)
 }
 
+export function updateGame(game: Game): void {
+  // Replace in custom games (remove old entry, push updated one)
+  const custom = getCustomGames().filter((g) => g.id !== game.id)
+  custom.push(game)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
+  // Hide the original default game (no-op if already hidden or not a default)
+  const hidden = getHiddenGameIds()
+  if (!hidden.includes(game.id)) {
+    hidden.push(game.id)
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(hidden))
+  }
+}
+
 export function deleteGame(id: string): void {
   // Remove from custom games if present
   const custom = getCustomGames().filter((g) => g.id !== id)
