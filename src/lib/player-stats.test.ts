@@ -11,7 +11,6 @@ const GAME: Game = {
   players: { min: 2, max: 4 },
   scoring_model: 'end_game',
   scoring: [{ id: 'pts', label: 'Points', type: 'number', confident: true }],
-  computed: [{ id: 'total', label: 'Total', formula: 'pts', confident: true }],
   validated: true,
   createdAt: '2024-01-01T00:00:00.000Z',
 }

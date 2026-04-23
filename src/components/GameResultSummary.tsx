@@ -1,16 +1,26 @@
-import { computePlayerTotal, computePlayerScores, computePerRoundTotal } from '@/lib/scoring'
+import { computePlayerTotal, computePerRoundTotal } from '@/lib/scoring'
 import type { Game } from '@/lib/games'
-import type { GameSession, SessionPlayer } from '@/lib/sessions'
+import type { GameSession, ScoreEntry, SessionPlayer } from '@/lib/sessions'
 
 function formatNames(names: string[]): string {
   if (names.length === 1) return names[0]
   return names.slice(0, -1).join(', ') + ' et ' + names[names.length - 1]
 }
 
-function formatCellValue(value: number | boolean | undefined): string | number {
-  if (value === undefined) return 0
-  if (typeof value === 'boolean') return value ? '✓' : '—'
-  return value
+/** Raw field values for a player (end_game, no round) */
+function getRawScores(
+  scores: ScoreEntry[],
+  playerId: string,
+  game: Game
+): Record<string, number> {
+  const result: Record<string, number> = {}
+  for (const field of game.scoring) {
+    const entry = scores.find(
+      (s) => s.playerId === playerId && s.fieldId === field.id && s.round === undefined
+    )
+    result[field.id] = entry ? Number(entry.value) : 0
+  }
+  return result
 }
 
 interface GameResultSummaryProps {
@@ -22,14 +32,13 @@ interface GameResultSummaryProps {
 export default function GameResultSummary({ game, session, sessionPlayers }: GameResultSummaryProps) {
   const isPerRound = game.scoring_model === 'per_round'
 
-  // For per_round, cumulative total; for end_game, standard total
   const ranked = sessionPlayers
     .map((p) => ({
       player: p,
       total: isPerRound
         ? computePerRoundTotal(game, session.scores, p.id)
         : computePlayerTotal(game, session.scores, p.id),
-      scores: computePlayerScores(game, session.scores, p.id),
+      scores: getRawScores(session.scores, p.id, game),
     }))
     .sort((a, b) => game.lowest_wins ? a.total - b.total : b.total - a.total)
 
@@ -52,8 +61,7 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
   const winnerNames = winners.map((w) => w.player.name)
   const isTie = winners.length > 1
 
-  // Table columns — per_round uses rounds as columns, end_game uses scoring fields.
-  // The "Total" column is omitted: it is already visible in the ranked list above.
+  // Table columns
   const perRoundScores = session.scores.filter((s) => s.round !== undefined)
   const roundsPlayed =
     isPerRound && perRoundScores.length > 0
@@ -68,17 +76,11 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
         label: `Manche ${i + 1}`,
         roundNum: i + 1,
       }))
-    : [
-        ...game.scoring.map((f) => ({ id: f.id, label: f.label })),
-        ...game.computed
-          .filter((f) => f.id !== 'total')
-          .map((f) => ({ id: f.id, label: f.label ?? f.id })),
-      ]
+    : game.scoring.map((f) => ({ id: f.id, label: f.label }))
 
-  // Breakdown table rows follow game order (order chosen at step 2), not ranking.
   const tableRows = sessionPlayers.map((p) => ({
     player: p,
-    scores: computePlayerScores(game, session.scores, p.id),
+    scores: getRawScores(session.scores, p.id, game),
   }))
 
   return (
@@ -169,9 +171,9 @@ export default function GameResultSummary({ game, session, sessionPlayers }: Gam
                     </span>
                   </td>
                   {tableCols.map((col) => {
-                    const cellValue: string | number = isPerRound
+                    const cellValue: number = isPerRound
                       ? computePlayerTotal(game, session.scores, player.id, col.roundNum)
-                      : formatCellValue(scores[col.id])
+                      : (scores[col.id] ?? 0)
                     return (
                       <td
                         key={col.id}

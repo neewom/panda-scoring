@@ -15,16 +15,9 @@ export const DEFAULT_GAMES: Game[] = [
       { id: 'finances', label: 'Finances', type: 'number', confident: true },
       { id: 'politique', label: 'Politique', type: 'number', confident: true },
       { id: 'cartes_actifs', label: 'Cartes actifs', type: 'number', confident: true },
-      { id: 'gouverneur_vide', label: 'Gouverneur vide', type: 'boolean', confident: true },
       { id: 'universites', label: 'Universités', type: 'number', confident: true },
       { id: 'population_port', label: 'Population port', type: 'number', confident: true },
       { id: 'esclavage', label: 'Esclavage', type: 'number', confident: true },
-    ],
-    computed: [
-      { id: 'bonus_gouverneur', label: 'Bonus gouverneur', formula: 'gouverneur_vide ? 3 : 0', confident: true },
-      { id: 'bonus_universites', label: 'Bonus universités', formula: 'universites * 3', confident: true },
-      { id: 'bonus_population', label: 'Bonus population', formula: 'floor(population_port / 3)', confident: true },
-      { id: 'total', label: 'Total', formula: 'villes + routes + industrie + culture + finances + politique + cartes_actifs + bonus_gouverneur + bonus_universites + bonus_population - esclavage', confident: true },
     ],
     validated: true,
     createdAt: '2024-01-01T00:00:00.000Z',
@@ -46,9 +39,6 @@ export const DEFAULT_GAMES: Game[] = [
       { id: 'carte_3_3', label: 'Carte 3-3', type: 'number', confident: true },
       { id: 'cles_restantes', label: 'Clés restantes', type: 'number', confident: true },
     ],
-    computed: [
-      { id: 'total', label: 'Total', formula: 'carte_1_1 + carte_1_2 + carte_1_3 + carte_2_1 + carte_2_2 + carte_2_3 + carte_3_1 + carte_3_2 + carte_3_3 + cles_restantes', confident: true },
-    ],
     validated: true,
     createdAt: '2024-01-01T00:00:00.000Z',
   },
@@ -61,9 +51,6 @@ export const DEFAULT_GAMES: Game[] = [
     rounds: { perPlayer: 1, offset: 0 },
     scoring: [
       { id: 'score', label: 'Score', type: 'number', confident: true },
-    ],
-    computed: [
-      { id: 'total', label: 'Total', formula: 'score', confident: true },
     ],
     scoring_notes: "Chaque joueur joue une fois en tant qu'attaquant. Le nombre de manches est égal au nombre de joueurs.",
     tiebreak_description: "En cas d'égalité, le joueur ayant le plus grand chiffre sur son dernier dé lors de la dernière manche l'emporte.",
@@ -80,9 +67,6 @@ export const DEFAULT_GAMES: Game[] = [
     end_condition: { score_threshold: 66 },
     scoring: [
       { id: 'score', label: 'Score', type: 'number', confident: true },
-    ],
-    computed: [
-      { id: 'total', label: 'Total', formula: 'score', confident: true },
     ],
     scoring_notes: "Chaque carte Tête de bœuf récupérée vaut autant de points que de têtes de bœuf imprimées dessus (1, 2, 3, 5 ou 7). Le joueur additionne toutes les têtes de bœuf récupérées pendant la manche. On joue jusqu'à ce qu'un joueur atteigne ou dépasse 66 points ; le joueur avec le moins de points gagne.",
     tiebreak_description: "En cas d'égalité, victoire partagée.",
@@ -101,9 +85,6 @@ export const DEFAULT_GAMES: Game[] = [
       { id: 'haut', label: 'Haut', type: 'number', confident: true },
       { id: 'bas', label: 'Bas', type: 'number', confident: true },
       { id: 'grotte', label: 'Grotte', type: 'number', confident: true },
-    ],
-    computed: [
-      { id: 'total', label: 'Total', formula: 'arbres + landes + horizontal + haut + bas + grotte', confident: true },
     ],
     validated: true,
     createdAt: '2024-01-01T00:00:00.000Z',

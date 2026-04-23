@@ -55,7 +55,6 @@ describe('games', () => {
       players: { min: 2, max: 4 },
       scoring_model: 'end_game',
       scoring: [],
-      computed: [],
       validated: false,
       createdAt: new Date().toISOString(),
     }
@@ -72,7 +71,6 @@ describe('games', () => {
       players: { min: 1, max: 2 },
       scoring_model: 'per_round',
       scoring: [],
-      computed: [],
       validated: false,
       createdAt: new Date().toISOString(),
     }
@@ -98,7 +96,6 @@ describe('games', () => {
       players: { min: 2, max: 2 },
       scoring_model: 'end_game',
       scoring: [],
-      computed: [],
       validated: false,
       createdAt: new Date().toISOString(),
     }
@@ -114,7 +111,6 @@ describe('getCustomGames / clearCustomGames', () => {
     players: { min: 2, max: 4 },
     scoring_model: 'end_game',
     scoring: [],
-    computed: [],
     validated: true,
     createdAt: new Date().toISOString(),
   }
@@ -179,7 +175,6 @@ describe('updateGame', () => {
     players: { min: 2, max: 4 },
     scoring_model: 'end_game',
     scoring: [],
-    computed: [],
     validated: true,
     createdAt: '2024-01-01T00:00:00.000Z',
   }
@@ -222,36 +217,28 @@ describe('buildCustomGame', () => {
     scoringModel: 'end_game' as const,
   }
 
-  it('génère le total comme somme des champs number uniquement', () => {
+  it('end_game : génère des IDs positionnels field_N', () => {
     const game = buildCustomGame({
       ...BASE,
-      categories: [
-        { label: 'Points', type: 'number' },
-        { label: 'Bonus', type: 'number' },
-        { label: 'Majorité', type: 'boolean' },
-      ],
+      categories: [{ label: 'Points' }, { label: 'Bonus' }],
     })
-    const total = game.computed.find((c) => c.id === 'total')!
-    expect(total.formula).toContain('points')
-    expect(total.formula).toContain('bonus')
-    expect(total.formula).not.toContain('majorite')
+    expect(game.scoring[0].id).toBe('field_0')
+    expect(game.scoring[1].id).toBe('field_1')
+    expect(game.scoring.every((f) => f.type === 'number')).toBe(true)
   })
 
-  it('exclut les champs boolean du total', () => {
+  it('per_round : crée automatiquement un champ Score unique', () => {
     const game = buildCustomGame({
       ...BASE,
-      categories: [{ label: 'Seul champ', type: 'boolean' }],
+      scoringModel: 'per_round',
+      categories: [],
     })
-    expect(game.computed[0].formula).toBe('0')
-  })
-
-  it('formule total = "0" quand aucun champ number', () => {
-    const game = buildCustomGame({ ...BASE, categories: [] })
-    expect(game.computed[0].formula).toBe('0')
+    expect(game.scoring).toHaveLength(1)
+    expect(game.scoring[0]).toMatchObject({ id: 'score', label: 'Score', type: 'number' })
   })
 
   it('validated est true', () => {
-    const game = buildCustomGame({ ...BASE, categories: [{ label: 'Pts', type: 'number' }] })
+    const game = buildCustomGame({ ...BASE, categories: [{ label: 'Pts' }] })
     expect(game.validated).toBe(true)
   })
 
@@ -281,22 +268,19 @@ describe('buildCustomGame', () => {
     expect(game.rounds).toEqual({ perPlayer: 1 })
   })
 
-  it('déduplique les ids de champs au label identique', () => {
+  it('deux catégories au même label → IDs différents', () => {
     const game = buildCustomGame({
       ...BASE,
-      categories: [
-        { label: 'Points', type: 'number' },
-        { label: 'Points', type: 'number' },
-      ],
+      categories: [{ label: 'Points' }, { label: 'Points' }],
     })
     const ids = game.scoring.map((f) => f.id)
     expect(new Set(ids).size).toBe(2)
   })
 
-  it('slug vide fallback sur field_N', () => {
+  it('label quelconque → field_N (pas de slug)', () => {
     const game = buildCustomGame({
       ...BASE,
-      categories: [{ label: '!!!', type: 'number' }],
+      categories: [{ label: '!!!' }],
     })
     expect(game.scoring[0].id).toMatch(/^field_/)
   })
@@ -308,7 +292,7 @@ describe('buildCustomGame — lowest_wins & end_condition', () => {
     playersMin: 2,
     playersMax: 4,
     scoringModel: 'per_round' as const,
-    categories: [],
+    categories: [] as { label: string }[],
   }
 
   it('lowest_wins true est conservé', () => {

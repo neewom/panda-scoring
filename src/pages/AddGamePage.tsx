@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { GripVertical, X } from 'lucide-react'
-import { getGames, getGameById, addGame, updateGame, buildCustomGame, type Game, type ScoringField, type ComputedField } from '@/lib/games'
+import { getGames, getGameById, addGame, updateGame, buildCustomGame, type Game, type ScoringField } from '@/lib/games'
 import PageHeader from '@/components/PageHeader'
 
 /* ─────────────────────────────────────────
@@ -30,7 +30,6 @@ import PageHeader from '@/components/PageHeader'
 interface CategoryItem {
   id: string
   label: string
-  type: 'number' | 'boolean'
 }
 
 /* ─────────────────────────────────────────
@@ -40,7 +39,6 @@ interface CategoryItem {
 interface SortableCategoryRowProps {
   category: CategoryItem
   onLabelChange: (id: string, label: string) => void
-  onTypeChange: (id: string, type: 'number' | 'boolean') => void
   onRemove: (id: string) => void
   focusOnMount: boolean
 }
@@ -48,7 +46,6 @@ interface SortableCategoryRowProps {
 function SortableCategoryRow({
   category,
   onLabelChange,
-  onTypeChange,
   onRemove,
   focusOnMount,
 }: SortableCategoryRowProps) {
@@ -78,7 +75,7 @@ function SortableCategoryRow({
         <GripVertical size={16} />
       </div>
 
-      <div className="flex-1 flex items-center gap-2 min-w-0 rounded-2xl border border-purple-100 bg-white px-3 py-2">
+      <div className="flex-1 min-w-0 rounded-2xl border border-purple-100 bg-white px-3 py-2">
         <input
           ref={inputRef}
           type="text"
@@ -86,34 +83,8 @@ function SortableCategoryRow({
           onChange={(e) => onLabelChange(category.id, e.target.value)}
           placeholder="ex: Arbres, Points de victoire…"
           aria-label="Label de la catégorie"
-          className="flex-1 min-w-0 text-sm text-purple-800 placeholder:text-purple-200 bg-transparent outline-none"
+          className="w-full text-sm text-purple-800 placeholder:text-purple-200 bg-transparent outline-none"
         />
-        <div className="flex rounded-lg border border-purple-200 overflow-hidden shrink-0">
-          <button
-            type="button"
-            onClick={() => onTypeChange(category.id, 'number')}
-            aria-label="Type nombre"
-            className={`px-2 py-1 text-xs font-medium transition-colors ${
-              category.type === 'number'
-                ? 'bg-purple-600 text-white'
-                : 'bg-white text-purple-400 hover:bg-purple-50'
-            }`}
-          >
-            123
-          </button>
-          <button
-            type="button"
-            onClick={() => onTypeChange(category.id, 'boolean')}
-            aria-label="Type oui/non"
-            className={`px-2 py-1 text-xs font-medium transition-colors ${
-              category.type === 'boolean'
-                ? 'bg-purple-600 text-white'
-                : 'bg-white text-purple-400 hover:bg-purple-50'
-            }`}
-          >
-            ✓/✗
-          </button>
-        </div>
       </div>
 
       <button
@@ -165,9 +136,11 @@ export default function AddGamePage() {
   )
   const [lowestWins, setLowestWins] = useState(editGame?.lowest_wins ?? false)
 
-  // Categories — seeded from existing scoring fields when editing
+  // Categories — seeded from existing scoring fields when editing (per_round auto-creates "Score")
   const [categories, setCategories] = useState<CategoryItem[]>(
-    editGame?.scoring.map((f) => ({ id: crypto.randomUUID(), label: f.label, type: f.type })) ?? []
+    editGame?.scoring_model !== 'per_round'
+      ? (editGame?.scoring.map((f) => ({ id: crypto.randomUUID(), label: f.label })) ?? [])
+      : []
   )
   const [lastAddedId, setLastAddedId] = useState<string | null>(null)
 
@@ -193,7 +166,7 @@ export default function AddGamePage() {
 
   function handleAddCategory() {
     const newId = crypto.randomUUID()
-    setCategories((prev) => [...prev, { id: newId, label: '', type: 'number' }])
+    setCategories((prev) => [...prev, { id: newId, label: '' }])
     setLastAddedId(newId)
     clearError('categories')
   }
@@ -201,10 +174,6 @@ export default function AddGamePage() {
   function handleUpdateLabel(id: string, label: string) {
     setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, label } : c)))
     clearError('categories')
-  }
-
-  function handleUpdateType(id: string, type: 'number' | 'boolean') {
-    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, type } : c)))
   }
 
   function handleRemoveCategory(id: string) {
@@ -242,7 +211,9 @@ export default function AddGamePage() {
     if (!isNaN(min) && !isNaN(max) && min > max) newErrors.playersMax = 'Doit être ≥ au minimum'
 
     const validCats = categories.filter((c) => c.label.trim())
-    if (validCats.length === 0) newErrors.categories = 'Au moins 1 catégorie requise'
+    if (scoringModel === 'end_game' && validCats.length === 0) {
+      newErrors.categories = 'Au moins 1 catégorie requise'
+    }
 
     if (scoringModel === 'per_round' && roundsType === 'fixed') {
       const rounds = parseInt(roundsCount)
@@ -273,15 +244,14 @@ export default function AddGamePage() {
 
     if (isEditMode && editGame) {
       // Rebuild scoring fields with positional IDs, preserve game identity
-      const scoring: ScoringField[] = validCats.map((cat, i) => ({
-        id: `field_${i}`,
-        label: cat.label,
-        type: cat.type,
-        confident: true,
-      }))
-      const numberIds = scoring.filter((f) => f.type === 'number').map((f) => f.id)
-      const totalFormula = numberIds.length > 0 ? numberIds.join(' + ') : '0'
-      const computed: ComputedField[] = [{ id: 'total', formula: totalFormula, confident: true }]
+      const scoring: ScoringField[] = scoringModel === 'per_round'
+        ? [{ id: 'score', label: 'Score', type: 'number', confident: true }]
+        : validCats.map((cat, i) => ({
+            id: `field_${i}`,
+            label: cat.label,
+            type: 'number' as const,
+            confident: true,
+          }))
 
       const updatedGame: Game = {
         ...editGame,
@@ -293,7 +263,6 @@ export default function AddGamePage() {
         end_condition: endCondition,
         lowest_wins: lowestWins || undefined,
         scoring,
-        computed,
         tieBreak: undefined,
         tiebreak_description: tiebreakDesc.trim() || undefined,
         scoring_notes: scoringNotes.trim() || undefined,
@@ -311,7 +280,7 @@ export default function AddGamePage() {
         rounds,
         end_condition: endCondition,
         lowest_wins: lowestWins || undefined,
-        categories: validCats.map((c) => ({ label: c.label, type: c.type })),
+        categories: validCats.map((c) => ({ label: c.label })),
         tiebreakDescription: tiebreakDesc || undefined,
         scoringNotes: scoringNotes || undefined,
       })
@@ -522,43 +491,44 @@ export default function AddGamePage() {
           </div>
         </div>
 
-        {/* ── Section 3 : Catégories de scoring ── */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-purple-500 uppercase tracking-wide">
-            Catégories de scoring *
-          </h2>
+        {/* ── Section 3 : Catégories de scoring (end_game only) ── */}
+        {scoringModel === 'end_game' && (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-purple-500 uppercase tracking-wide">
+              Catégories de scoring *
+            </h2>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
-              <ul className="space-y-2" aria-label="Catégories de scoring">
-                {categories.map((cat) => (
-                  <SortableCategoryRow
-                    key={cat.id}
-                    category={cat}
-                    onLabelChange={handleUpdateLabel}
-                    onTypeChange={handleUpdateType}
-                    onRemove={handleRemoveCategory}
-                    focusOnMount={cat.id === lastAddedId}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          </DndContext>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={categoryIds} strategy={verticalListSortingStrategy}>
+                <ul className="space-y-2" aria-label="Catégories de scoring">
+                  {categories.map((cat) => (
+                    <SortableCategoryRow
+                      key={cat.id}
+                      category={cat}
+                      onLabelChange={handleUpdateLabel}
+                      onRemove={handleRemoveCategory}
+                      focusOnMount={cat.id === lastAddedId}
+                    />
+                  ))}
+                </ul>
+              </SortableContext>
+            </DndContext>
 
-          <Button
-            type="button"
-            onClick={handleAddCategory}
-            variant="outline"
-            aria-label="Ajouter une catégorie de scoring"
-            className="w-full h-10 border-2 border-dashed border-purple-200 text-purple-400 hover:border-purple-400 hover:text-purple-600 rounded-2xl font-medium text-sm bg-transparent"
-          >
-            + Ajouter une catégorie
-          </Button>
+            <Button
+              type="button"
+              onClick={handleAddCategory}
+              variant="outline"
+              aria-label="Ajouter une catégorie de scoring"
+              className="w-full h-10 border-2 border-dashed border-purple-200 text-purple-400 hover:border-purple-400 hover:text-purple-600 rounded-2xl font-medium text-sm bg-transparent"
+            >
+              + Ajouter une catégorie
+            </Button>
 
-          {errors.categories && (
-            <p className="text-xs text-pink-500">{errors.categories}</p>
-          )}
-        </div>
+            {errors.categories && (
+              <p className="text-xs text-pink-500">{errors.categories}</p>
+            )}
+          </div>
+        )}
 
         {/* ── Section 4 : Informations complémentaires ── */}
         <Collapsible>
