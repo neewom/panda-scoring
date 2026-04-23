@@ -10,10 +10,6 @@ const SCORING_MODEL_LABELS: Record<string, string> = {
   hybrid: 'Hybride',
 }
 
-function prettifyFormula(formula: string): string {
-  return formula.replace(/\*/g, '×').replace(/\//g, '÷')
-}
-
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -25,7 +21,6 @@ export default function GameDetailPage() {
     return <Navigate to="/games" replace />
   }
 
-  const computedFields = game.computed.filter((f) => f.id !== 'total')
   const scoringModelLabel = SCORING_MODEL_LABELS[game.scoring_model] ?? game.scoring_model
 
   function handleDeleteConfirm() {
@@ -93,34 +88,12 @@ export default function GameDetailPage() {
           </p>
           <ul className="space-y-2" aria-label="Catégories de scoring">
             {game.scoring.map((field) => (
-              <li key={field.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium text-purple-800">{field.label}</span>
-                <span className="text-xs text-purple-400 bg-purple-50 px-2 py-0.5 rounded-full">
-                  {field.type === 'boolean' ? 'oui / non' : 'nombre'}
-                </span>
+              <li key={field.id} className="text-sm font-medium text-purple-800">
+                {field.label}
               </li>
             ))}
           </ul>
         </div>
-
-        {/* Calculs automatiques */}
-        {computedFields.length > 0 && (
-          <div className="bg-white rounded-2xl border border-purple-100 px-4 py-4 space-y-3">
-            <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-              Calculs automatiques
-            </p>
-            <ul className="space-y-2" aria-label="Calculs automatiques">
-              {computedFields.map((field) => (
-                <li key={field.id} className="text-sm space-y-0.5">
-                  <p className="font-medium text-purple-800">{field.label ?? field.id}</p>
-                  <p className="text-xs text-purple-400 font-mono">
-                    {prettifyFormula(field.formula)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         {/* Départage */}
         <div className="bg-white rounded-2xl border border-purple-100 px-4 py-4 space-y-3">

@@ -1,7 +1,7 @@
 export interface ScoreEntry {
   playerId: string
   fieldId: string
-  value: number | boolean
+  value: number
   round?: number
   detail?: string
 }

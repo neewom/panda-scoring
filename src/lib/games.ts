@@ -4,23 +4,15 @@ export interface ScoringField {
   id: string
   label: string
   description?: string
-  type: 'number' | 'boolean'
-  min?: number
-  confident: boolean
-}
-
-export interface ComputedField {
-  id: string
-  label?: string
-  formula: string
+  type: 'number'
   confident: boolean
 }
 
 export interface TieBreakRule {
   label: string
   compare: (
-    aScores: Record<string, number | boolean>,
-    bScores: Record<string, number | boolean>
+    aScores: Record<string, number>,
+    bScores: Record<string, number>
   ) => number
 }
 
@@ -34,7 +26,6 @@ export interface Game {
   end_condition?: { score_threshold: number }
   lowest_wins?: boolean
   scoring: ScoringField[]
-  computed: ComputedField[]
   tieBreak?: TieBreakRule[]
   scoring_notes?: string
   tiebreak_description?: string
@@ -74,11 +65,9 @@ export function getGameById(id: string): Game | undefined {
 }
 
 export function updateGame(game: Game): void {
-  // Replace in custom games (remove old entry, push updated one)
   const custom = getCustomGames().filter((g) => g.id !== game.id)
   custom.push(game)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
-  // Hide the original default game (no-op if already hidden or not a default)
   const hidden = getHiddenGameIds()
   if (!hidden.includes(game.id)) {
     hidden.push(game.id)
@@ -87,10 +76,8 @@ export function updateGame(game: Game): void {
 }
 
 export function deleteGame(id: string): void {
-  // Remove from custom games if present
   const custom = getCustomGames().filter((g) => g.id !== id)
   localStorage.setItem(STORAGE_KEY, JSON.stringify(custom))
-  // Add to hidden list (covers both custom and default games)
   const hidden = getHiddenGameIds()
   if (!hidden.includes(id)) {
     hidden.push(id)
@@ -117,24 +104,21 @@ export interface CustomGameInput {
   rounds?: number | { perPlayer: number }
   end_condition?: { score_threshold: number }
   lowest_wins?: boolean
-  categories: { label: string; type: 'number' | 'boolean' }[]
+  categories: { label: string }[]
   tiebreakDescription?: string
   scoringNotes?: string
 }
 
 export function buildCustomGame(input: CustomGameInput): Game {
-  // Use positional IDs (field_0, field_1, ...) to guarantee valid JS identifiers
-  // regardless of category label content. Labels are only used for display.
-  const scoring: ScoringField[] = input.categories.map((cat, i) => ({
-    id: `field_${i}`,
-    label: cat.label,
-    type: cat.type,
-    confident: true,
-  }))
-
-  const numberIds = scoring.filter((f) => f.type === 'number').map((f) => f.id)
-  const totalFormula = numberIds.length > 0 ? numberIds.join(' + ') : '0'
-  const computed: ComputedField[] = [{ id: 'total', formula: totalFormula, confident: true }]
+  // per_round always gets a single "Score" field; end_game uses user-defined categories
+  const scoring: ScoringField[] = input.scoringModel === 'per_round'
+    ? [{ id: 'score', label: 'Score', type: 'number', confident: true }]
+    : input.categories.map((cat, i) => ({
+        id: `field_${i}`,
+        label: cat.label,
+        type: 'number' as const,
+        confident: true,
+      }))
 
   return {
     id: crypto.randomUUID(),
@@ -146,7 +130,6 @@ export function buildCustomGame(input: CustomGameInput): Game {
     end_condition: input.end_condition,
     lowest_wins: input.lowest_wins || undefined,
     scoring,
-    computed,
     tiebreak_description: input.tiebreakDescription?.trim() || undefined,
     scoring_notes: input.scoringNotes?.trim() || undefined,
     validated: true,

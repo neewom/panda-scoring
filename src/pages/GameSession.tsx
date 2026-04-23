@@ -89,7 +89,7 @@ export default function GameSession() {
     )
   }
 
-  function handleScoreChange(field: ScoringField, value: number | boolean, r?: number) {
+  function handleScoreChange(field: ScoringField, value: number, r?: number) {
     const existing = getScore(currentPlayer.id, field.id, r)
     updateScore(session!.id, {
       playerId: currentPlayer.id,
@@ -345,65 +345,44 @@ export default function GameSession() {
 
           <div className="space-y-2">
             <label className="text-sm text-purple-500">{currentField.label}</label>
-            {currentField.type === 'boolean' ? (
-              <button
-                onClick={() => {
-                  const r = isEndGame ? undefined : round
-                  const cur = getScore(currentPlayer.id, currentField.id, r)
-                  handleScoreChange(currentField, !cur?.value, r)
-                }}
-                className={`w-full h-12 rounded-xl font-semibold transition-colors ${
-                  getScore(currentPlayer.id, currentField.id, isEndGame ? undefined : round)?.value
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-50 text-purple-400 border-2 border-purple-200'
-                }`}
-              >
-                {getScore(currentPlayer.id, currentField.id, isEndGame ? undefined : round)?.value
-                  ? 'Oui ✓'
-                  : 'Non'}
-              </button>
-            ) : (
-              <>
-                <input
-                  ref={inputRef}
-                  type="number"
-                  inputMode="numeric"
-                  value={
-                    (getScore(
-                      currentPlayer.id,
-                      currentField.id,
-                      isEndGame ? undefined : round
-                    )?.value as number) ?? ''
-                  }
-                  onChange={(e) =>
-                    handleScoreChange(
-                      currentField,
-                      Number(e.target.value),
-                      isEndGame ? undefined : round
-                    )
-                  }
-                  placeholder="0"
-                  aria-label={currentField.label}
-                  className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
-                />
-                <DetailCalc
-                  fieldId={currentField.id}
-                  expression={
-                    getScore(
-                      currentPlayer.id,
-                      currentField.id,
-                      isEndGame ? undefined : round
-                    )?.detail ?? ''
-                  }
-                  open={!!openDetails[currentField.id]}
-                  hasError={!!detailErrors[currentField.id]}
-                  onToggle={() => toggleDetail(currentField.id)}
-                  onChange={(expr) =>
-                    handleDetailChange(currentField, expr, isEndGame ? undefined : round)
-                  }
-                />
-              </>
-            )}
+            <input
+              ref={inputRef}
+              type="number"
+              inputMode="numeric"
+              value={
+                getScore(
+                  currentPlayer.id,
+                  currentField.id,
+                  isEndGame ? undefined : round
+                )?.value ?? ''
+              }
+              onChange={(e) =>
+                handleScoreChange(
+                  currentField,
+                  Number(e.target.value),
+                  isEndGame ? undefined : round
+                )
+              }
+              placeholder="0"
+              aria-label={currentField.label}
+              className="w-full h-12 rounded-xl border-2 border-purple-200 px-3 text-lg font-semibold text-center focus:outline-none focus:border-purple-400"
+            />
+            <DetailCalc
+              fieldId={currentField.id}
+              expression={
+                getScore(
+                  currentPlayer.id,
+                  currentField.id,
+                  isEndGame ? undefined : round
+                )?.detail ?? ''
+              }
+              open={!!openDetails[currentField.id]}
+              hasError={!!detailErrors[currentField.id]}
+              onToggle={() => toggleDetail(currentField.id)}
+              onChange={(expr) =>
+                handleDetailChange(currentField, expr, isEndGame ? undefined : round)
+              }
+            />
           </div>
 
           {/* Total cumulé — per_round uniquement */}
