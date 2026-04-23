@@ -161,13 +161,22 @@ export default function GameDetailPage() {
           🎮 Jouer
         </Button>
 
-        <Button
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/games/${game.id}/edit`)}
+            className="flex-1"
+          >
+            Modifier
+          </Button>
+          <Button
             variant="outline"
             onClick={() => setShowDeleteModal(true)}
-            className="w-full border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 hover:text-red-600"
+            className="flex-1 border-red-300 text-red-500 hover:bg-red-50 hover:border-red-400 hover:text-red-600"
           >
-            Supprimer ce jeu
+            Supprimer
           </Button>
+        </div>
 
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   DndContext,
   PointerSensor,
@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { GripVertical, X } from 'lucide-react'
-import { getGames, addGame, buildCustomGame } from '@/lib/games'
+import { getGames, getGameById, addGame, updateGame, buildCustomGame, type Game, type ScoringField, type ComputedField } from '@/lib/games'
 import PageHeader from '@/components/PageHeader'
 
 /* ─────────────────────────────────────────
@@ -132,29 +132,48 @@ function SortableCategoryRow({
    AddGamePage
 ───────────────────────────────────────── */
 
+function inferRoundsType(game: Game): 'fixed' | 'perPlayer' | 'threshold' {
+  if (game.end_condition) return 'threshold'
+  if (typeof game.rounds === 'object' && game.rounds !== null) return 'perPlayer'
+  return 'fixed'
+}
+
 export default function AddGamePage() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id?: string }>()
+  const editGame = id ? getGameById(id) : undefined
+  const isEditMode = Boolean(editGame)
 
   // General info
-  const [gameName, setGameName] = useState('')
-  const [publisher, setPublisher] = useState('')
-  const [playersMin, setPlayersMin] = useState('2')
-  const [playersMax, setPlayersMax] = useState('4')
+  const [gameName, setGameName] = useState(editGame?.name ?? '')
+  const [publisher, setPublisher] = useState(editGame?.publisher ?? '')
+  const [playersMin, setPlayersMin] = useState(String(editGame?.players.min ?? 2))
+  const [playersMax, setPlayersMax] = useState(String(editGame?.players.max ?? 4))
 
   // Scoring model
-  const [scoringModel, setScoringModel] = useState<'end_game' | 'per_round'>('end_game')
-  const [roundsType, setRoundsType] = useState<'fixed' | 'perPlayer' | 'threshold'>('fixed')
-  const [roundsCount, setRoundsCount] = useState('3')
-  const [scoreThreshold, setScoreThreshold] = useState('')
-  const [lowestWins, setLowestWins] = useState(false)
+  const [scoringModel, setScoringModel] = useState<'end_game' | 'per_round'>(
+    editGame?.scoring_model === 'per_round' ? 'per_round' : 'end_game'
+  )
+  const [roundsType, setRoundsType] = useState<'fixed' | 'perPlayer' | 'threshold'>(
+    editGame ? inferRoundsType(editGame) : 'fixed'
+  )
+  const [roundsCount, setRoundsCount] = useState(
+    typeof editGame?.rounds === 'number' ? String(editGame.rounds) : '3'
+  )
+  const [scoreThreshold, setScoreThreshold] = useState(
+    editGame?.end_condition ? String(editGame.end_condition.score_threshold) : ''
+  )
+  const [lowestWins, setLowestWins] = useState(editGame?.lowest_wins ?? false)
 
-  // Categories
-  const [categories, setCategories] = useState<CategoryItem[]>([])
+  // Categories — seeded from existing scoring fields when editing
+  const [categories, setCategories] = useState<CategoryItem[]>(
+    editGame?.scoring.map((f) => ({ id: crypto.randomUUID(), label: f.label, type: f.type })) ?? []
+  )
   const [lastAddedId, setLastAddedId] = useState<string | null>(null)
 
   // Optional
-  const [tiebreakDesc, setTiebreakDesc] = useState('')
-  const [scoringNotes, setScoringNotes] = useState('')
+  const [tiebreakDesc, setTiebreakDesc] = useState(editGame?.tiebreak_description ?? '')
+  const [scoringNotes, setScoringNotes] = useState(editGame?.scoring_notes ?? '')
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -210,7 +229,9 @@ export default function AddGamePage() {
     if (!trimmedName) {
       newErrors.gameName = 'Le nom du jeu est requis'
     } else {
-      const exists = getGames().find((g) => g.name.toLowerCase() === trimmedName.toLowerCase())
+      const exists = getGames().find(
+        (g) => g.name.toLowerCase() === trimmedName.toLowerCase() && g.id !== editGame?.id
+      )
       if (exists) newErrors.gameName = 'Un jeu avec ce nom existe déjà'
     }
 
@@ -250,22 +271,53 @@ export default function AddGamePage() {
       else if (roundsType === 'threshold') endCondition = { score_threshold: parseInt(scoreThreshold) }
     }
 
-    const game = buildCustomGame({
-      name: gameName,
-      publisher: publisher || undefined,
-      playersMin: parseInt(playersMin),
-      playersMax: parseInt(playersMax),
-      scoringModel,
-      rounds,
-      end_condition: endCondition,
-      lowest_wins: lowestWins || undefined,
-      categories: validCats.map((c) => ({ label: c.label, type: c.type })),
-      tiebreakDescription: tiebreakDesc || undefined,
-      scoringNotes: scoringNotes || undefined,
-    })
+    if (isEditMode && editGame) {
+      // Rebuild scoring fields with positional IDs, preserve game identity
+      const scoring: ScoringField[] = validCats.map((cat, i) => ({
+        id: `field_${i}`,
+        label: cat.label,
+        type: cat.type,
+        confident: true,
+      }))
+      const numberIds = scoring.filter((f) => f.type === 'number').map((f) => f.id)
+      const totalFormula = numberIds.length > 0 ? numberIds.join(' + ') : '0'
+      const computed: ComputedField[] = [{ id: 'total', formula: totalFormula, confident: true }]
 
-    addGame(game)
-    navigate(`/games/${game.id}`)
+      const updatedGame: Game = {
+        ...editGame,
+        name: gameName.trim(),
+        publisher: publisher.trim() || undefined,
+        players: { min: parseInt(playersMin), max: parseInt(playersMax) },
+        scoring_model: scoringModel,
+        rounds,
+        end_condition: endCondition,
+        lowest_wins: lowestWins || undefined,
+        scoring,
+        computed,
+        tieBreak: undefined,
+        tiebreak_description: tiebreakDesc.trim() || undefined,
+        scoring_notes: scoringNotes.trim() || undefined,
+        validated: true,
+      }
+      updateGame(updatedGame)
+      navigate(`/games/${editGame.id}`)
+    } else {
+      const game = buildCustomGame({
+        name: gameName,
+        publisher: publisher || undefined,
+        playersMin: parseInt(playersMin),
+        playersMax: parseInt(playersMax),
+        scoringModel,
+        rounds,
+        end_condition: endCondition,
+        lowest_wins: lowestWins || undefined,
+        categories: validCats.map((c) => ({ label: c.label, type: c.type })),
+        tiebreakDescription: tiebreakDesc || undefined,
+        scoringNotes: scoringNotes || undefined,
+      })
+      addGame(game)
+      navigate(`/games/${game.id}`)
+    }
   }
 
   const categoryIds = categories.map((c) => c.id)
@@ -279,7 +331,11 @@ export default function AddGamePage() {
       <div className="w-full max-w-sm space-y-8">
 
         {/* Header */}
-        <PageHeader title="Nouveau jeu" onBack={() => navigate('/games')} backLabel="Bibliothèque" />
+        <PageHeader
+          title={isEditMode ? 'Modifier le jeu' : 'Nouveau jeu'}
+          onBack={() => isEditMode ? navigate(`/games/${editGame!.id}`) : navigate('/games')}
+          backLabel={isEditMode ? editGame!.name : 'Bibliothèque'}
+        />
 
         {/* ── Section 1 : Informations générales ── */}
         <div className="space-y-4">
@@ -540,7 +596,7 @@ export default function AddGamePage() {
           type="submit"
           className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
         >
-          Enregistrer le jeu
+          {isEditMode ? 'Enregistrer les modifications' : 'Enregistrer le jeu'}
         </Button>
 
       </div>

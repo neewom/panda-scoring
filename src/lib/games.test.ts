@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getGames, getGameById, addGame, searchGames, buildCustomGame, computeRoundCount, getCustomGames, clearCustomGames, deleteGame, type Game } from './games'
+import { getGames, getGameById, addGame, updateGame, searchGames, buildCustomGame, computeRoundCount, getCustomGames, clearCustomGames, deleteGame, type Game } from './games'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -169,6 +169,48 @@ describe('getCustomGames / clearCustomGames', () => {
     addGame(CUSTOM)
     expect(() => deleteGame('nonexistent')).not.toThrow()
     expect(getCustomGames()).toHaveLength(1)
+  })
+})
+
+describe('updateGame', () => {
+  const BASE: Game = {
+    id: 'update-test',
+    name: 'Update Test',
+    players: { min: 2, max: 4 },
+    scoring_model: 'end_game',
+    scoring: [],
+    computed: [],
+    validated: true,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('met à jour un jeu custom existant sans dupliquer', () => {
+    addGame(BASE)
+    updateGame({ ...BASE, name: 'Nouveau nom' })
+    const custom = getCustomGames()
+    expect(custom).toHaveLength(1)
+    expect(custom[0].name).toBe('Nouveau nom')
+  })
+
+  it('préserve l\'id et le createdAt du jeu d\'origine', () => {
+    addGame(BASE)
+    updateGame({ ...BASE, name: 'Modifié' })
+    const game = getGameById('update-test')
+    expect(game?.id).toBe('update-test')
+    expect(game?.createdAt).toBe('2024-01-01T00:00:00.000Z')
+  })
+
+  it('masque un jeu hardcodé lors de la première modification', () => {
+    updateGame({ ...BASE, id: 'endeavor', name: 'Endeavor modifié' })
+    const game = getGameById('endeavor')
+    expect(game?.name).toBe('Endeavor modifié')
+    // le hardcodé d'origine ne doit plus apparaître en double
+    expect(getGames().filter((g) => g.id === 'endeavor')).toHaveLength(1)
   })
 })
 
