@@ -135,6 +135,25 @@ export function clearSessions(): void {
   localStorage.removeItem(STORAGE_KEY)
 }
 
+/**
+ * Returns up to `n` unique game IDs from finished sessions, most recent first.
+ */
+export function getRecentGameIds(n: number): string[] {
+  const finished = getFinishedSessions()
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const s of finished) {
+    if (!seen.has(s.gameId)) {
+      seen.add(s.gameId)
+      result.push(s.gameId)
+      if (result.length === n) break
+    }
+  }
+  return result
+}
+
 export function resolveSessionPlayers(
   session: GameSession,
   allPlayers: { id: string; name: string; createdAt: string }[]

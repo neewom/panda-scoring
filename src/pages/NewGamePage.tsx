@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { searchGames, getGameById } from '@/lib/games'
 import { getPlayers, addPlayer } from '@/lib/players'
-import { createSession } from '@/lib/sessions'
+import { createSession, getRecentGameIds } from '@/lib/sessions'
 import type { Game } from '@/lib/games'
 import type { Player } from '@/lib/players'
 import PageHeader from '@/components/PageHeader'
@@ -88,6 +88,10 @@ export default function NewGamePage() {
   const newPlayerInputRef = useRef<HTMLInputElement>(null)
 
   const filteredGames = searchGames(query)
+
+  const recentGames = query === ''
+    ? getRecentGameIds(3).map((id) => getGameById(id)).filter((g): g is Game => g !== undefined)
+    : []
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -185,37 +189,118 @@ export default function NewGamePage() {
             <p className="text-sm font-semibold text-purple-500 uppercase tracking-wide">
               Étape 1 — Choisir un jeu
             </p>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un jeu…"
-              aria-label="Rechercher un jeu"
-              className="w-full h-10 rounded-xl border-2 border-purple-200 px-3 text-sm focus:outline-none focus:border-purple-400 bg-white"
-            />
-            <ul className="space-y-2" aria-label="Résultats de recherche">
-              {filteredGames.map((game) => (
-                <li key={game.id}>
-                  <button
-                    onClick={() => setSelectedGame(game)}
-                    aria-pressed={selectedGame?.id === game.id}
-                    className={`w-full text-left rounded-2xl px-4 py-3 border transition-colors ${
-                      selectedGame?.id === game.id
-                        ? 'border-purple-400 bg-purple-50'
-                        : 'border-purple-100 bg-white hover:border-purple-200'
-                    }`}
-                  >
-                    <p className="font-semibold text-purple-800">{game.name}</p>
-                    <p className="text-xs text-purple-400">
-                      {game.players.min}–{game.players.max} joueurs
-                    </p>
-                  </button>
-                </li>
-              ))}
-              {filteredGames.length === 0 && (
-                <p className="text-center text-purple-300 text-sm">Aucun jeu trouvé.</p>
+
+            {/* Search input with clear button */}
+            <div className="relative">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher un jeu…"
+                aria-label="Rechercher un jeu"
+                className="w-full h-10 rounded-xl border-2 border-purple-200 px-3 pr-8 text-sm focus:outline-none focus:border-purple-400 bg-white"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Effacer la recherche"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-700 text-lg leading-none"
+                >
+                  ✕
+                </button>
               )}
-            </ul>
+            </div>
+
+            {/* État vide : input vide → afficher les derniers jeux joués ou tous les jeux */}
+            {query === '' && (
+              recentGames.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">
+                    Derniers jeux joués
+                  </p>
+                  <ul className="space-y-2" aria-label="Derniers jeux joués">
+                    {recentGames.map((game) => (
+                      <li key={game.id}>
+                        <button
+                          onClick={() => setSelectedGame(game)}
+                          aria-pressed={selectedGame?.id === game.id}
+                          className={`w-full text-left rounded-2xl px-4 py-3 border transition-colors ${
+                            selectedGame?.id === game.id
+                              ? 'border-purple-400 bg-purple-50'
+                              : 'border-purple-100 bg-white hover:border-purple-200'
+                          }`}
+                        >
+                          <p className="font-semibold text-purple-800">{game.name}</p>
+                          <p className="text-xs text-purple-400">
+                            {game.players.min}–{game.players.max} joueurs
+                          </p>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <ul className="space-y-2" aria-label="Tous les jeux">
+                  {filteredGames.map((game) => (
+                    <li key={game.id}>
+                      <button
+                        onClick={() => setSelectedGame(game)}
+                        aria-pressed={selectedGame?.id === game.id}
+                        className={`w-full text-left rounded-2xl px-4 py-3 border transition-colors ${
+                          selectedGame?.id === game.id
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-purple-100 bg-white hover:border-purple-200'
+                        }`}
+                      >
+                        <p className="font-semibold text-purple-800">{game.name}</p>
+                        <p className="text-xs text-purple-400">
+                          {game.players.min}–{game.players.max} joueurs
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )
+            )}
+
+            {/* Pendant la saisie : résultats filtrés */}
+            {query !== '' && (
+              filteredGames.length > 0 ? (
+                <ul className="space-y-2" aria-label="Résultats de recherche">
+                  {filteredGames.map((game) => (
+                    <li key={game.id}>
+                      <button
+                        onClick={() => setSelectedGame(game)}
+                        aria-pressed={selectedGame?.id === game.id}
+                        className={`w-full text-left rounded-2xl px-4 py-3 border transition-colors ${
+                          selectedGame?.id === game.id
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-purple-100 bg-white hover:border-purple-200'
+                        }`}
+                      >
+                        <p className="font-semibold text-purple-800">{game.name}</p>
+                        <p className="text-xs text-purple-400">
+                          {game.players.min}–{game.players.max} joueurs
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center space-y-2 py-4">
+                  <p className="text-purple-300 text-sm">Jeu introuvable</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/games')}
+                    className="text-sm font-medium text-purple-500 hover:text-purple-700 underline underline-offset-2"
+                  >
+                    Ajouter un jeu dans la bibliothèque
+                  </button>
+                </div>
+              )
+            )}
+
             <Button
               onClick={() => setStep(2)}
               disabled={selectedGame === null}

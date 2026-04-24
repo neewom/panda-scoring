@@ -55,6 +55,7 @@ import {
   updateSessionProgress,
   abandonSession,
   deleteSession,
+  getRecentGameIds,
 } from './sessions'
 
 describe('updateScore', () => {
@@ -247,6 +248,54 @@ describe('deleteSession', () => {
     createSession('game', ['p1'])
     expect(() => deleteSession('unknown')).not.toThrow()
     expect(getSessionCount()).toBe(1)
+  })
+})
+
+describe('getRecentGameIds', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    localStorageMock.clear()
+  })
+
+  it('retourne un tableau vide si aucune session terminée', () => {
+    createSession('game-a', ['p1'])
+    expect(getRecentGameIds(3)).toEqual([])
+  })
+
+  it('retourne les game IDs des parties terminées, plus récent en premier', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-01T10:00:00Z'))
+    const s1 = createSession('game-a', ['p1'])
+    finishSession(s1.id, { p1: 'Alice' })
+    vi.setSystemTime(new Date('2024-01-01T11:00:00Z'))
+    const s2 = createSession('game-b', ['p1'])
+    finishSession(s2.id, { p1: 'Alice' })
+    vi.useRealTimers()
+    // s2 (game-b) plus récent que s1 (game-a)
+    const result = getRecentGameIds(3)
+    expect(result[0]).toBe('game-b')
+    expect(result[1]).toBe('game-a')
+  })
+
+  it('déduplique les game IDs', () => {
+    const s1 = createSession('game-a', ['p1'])
+    finishSession(s1.id, { p1: 'Alice' })
+    const s2 = createSession('game-a', ['p1'])
+    finishSession(s2.id, { p1: 'Alice' })
+    expect(getRecentGameIds(3)).toEqual(['game-a'])
+  })
+
+  it('limite à n résultats', () => {
+    for (const id of ['g1', 'g2', 'g3', 'g4']) {
+      const s = createSession(id, ['p1'])
+      finishSession(s.id, { p1: 'Alice' })
+    }
+    expect(getRecentGameIds(2)).toHaveLength(2)
+  })
+
+  it('ignore les sessions in_progress', () => {
+    createSession('game-a', ['p1'])
+    expect(getRecentGameIds(3)).toEqual([])
   })
 })
 
