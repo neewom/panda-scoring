@@ -2,7 +2,7 @@ import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { getGameById } from '@/lib/games'
 import { getPlayers } from '@/lib/players'
-import { getSessionById, resolveSessionPlayers } from '@/lib/sessions'
+import { getSessionById, resolveSessionPlayers, createSession } from '@/lib/sessions'
 import GameResultSummary from '@/components/GameResultSummary'
 import PageHeader from '@/components/PageHeader'
 
@@ -37,6 +37,17 @@ export default function GameResults() {
             className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-2xl"
           >
             🎮 Nouvelle partie
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const rematch = createSession(session.gameId, session.players)
+              navigate(`/game/${rematch.id}`)
+            }}
+            aria-label="Revanche"
+            className="w-full h-12 font-semibold rounded-2xl border-2 border-purple-200 text-purple-600 hover:bg-purple-50"
+          >
+            🔁 Revanche
           </Button>
           <Button
             variant="ghost"
